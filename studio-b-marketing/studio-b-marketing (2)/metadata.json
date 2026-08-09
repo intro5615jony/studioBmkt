@@ -1,8 +1,0 @@
-{
-  "name": "Remix Studio B Marketing",
-  "description": "Transformamos marcas em resultados através de estratégias digitais, gestão de redes sociais e tráfego pago.",
-  "requestFramePermissions": [],
-  "majorCapabilities": [
-    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
-  ]
-}

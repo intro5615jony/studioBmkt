@@ -19,7 +19,7 @@ export async function sendAuthEmail(options: SendAuthEmailOptions) {
   const logoUrl = origin ? `${origin}/logo.png` : 'https://studiobmkt.com.br/logo.png';
 
   const subject = type === 'invite'
-    ? 'Seu acesso ao Studio B Marketing está pronto'
+    ? 'Seu acesso ao Studio B Marketing'
     : 'Redefinição de senha | Studio B Marketing';
 
   const htmlContent = type === 'invite'

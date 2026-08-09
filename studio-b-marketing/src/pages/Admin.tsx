@@ -2,7 +2,6 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { 
   signInWithPopup, 
   signInWithEmailAndPassword,
-  sendPasswordResetEmail,
   confirmPasswordReset,
   verifyPasswordResetCode,
   setPersistence,
@@ -297,7 +296,7 @@ const SetPasswordForm = ({ oobCode, onGoToLogin }: { oobCode: string | null; onG
 
   useEffect(() => {
     if (!oobCode) {
-      setOobCodeError("Este link expirou ou já foi utilizado.");
+      setOobCodeError("auth/missing-action-code");
       setVerifying(false);
       return;
     }
@@ -307,9 +306,9 @@ const SetPasswordForm = ({ oobCode, onGoToLogin }: { oobCode: string | null; onG
         setVerifiedEmail(email);
         setVerifying(false);
       })
-      .catch((err) => {
-        console.error("Error verifying reset code:", err);
-        setOobCodeError("Este link expirou ou já foi utilizado.");
+      .catch((err: any) => {
+        console.error("Erro na verificação do código oobCode (code:", err?.code, "):", err);
+        setOobCodeError(err?.code || "auth/invalid-action-code");
         setVerifying(false);
       });
   }, [oobCode]);
@@ -357,15 +356,56 @@ const SetPasswordForm = ({ oobCode, onGoToLogin }: { oobCode: string | null; onG
 
       setIsSuccess(true);
     } catch (err: any) {
-      console.error("Password reset submission error:", err);
+      console.error("Password reset submission error (code:", err?.code, "):", err);
       if (err.code === 'auth/expired-action-code' || err.code === 'auth/invalid-action-code') {
-        setOobCodeError("Este link expirou ou já foi utilizado.");
+        setOobCodeError(err.code);
       } else {
         setFormError(err.message || "Erro ao salvar a senha. Tente novamente.");
       }
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const renderOobErrorState = () => {
+    let title = "Link Inválido ou Já Utilizado";
+    let description = "Este link é inválido ou já foi utilizado.";
+
+    if (oobCodeError === 'auth/expired-action-code') {
+      title = "Link Expirado";
+      description = "Este link expirou. Solicite um novo link.";
+    } else if (oobCodeError === 'auth/invalid-action-code') {
+      title = "Link Inválido";
+      description = "Este link é inválido ou já foi utilizado.";
+    } else if (oobCodeError === 'auth/missing-action-code') {
+      title = "Link Incompleto";
+      description = "Nenhum código de validação foi encontrado no link. Por favor, utilize o link recebido por e-mail.";
+    } else {
+      title = "Erro ao Validar Link";
+      description = `Não foi possível validar seu link de acesso (${oobCodeError}). Por favor, solicite um novo link.`;
+    }
+
+    return (
+      <div className="text-center space-y-6">
+        <div className="w-16 h-16 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center mx-auto shadow-inner">
+          <AlertCircle size={36} />
+        </div>
+        <div>
+          <h2 className="text-xl font-extrabold text-[#43210D] font-heading mb-2">
+            {title}
+          </h2>
+          <p className="text-xs sm:text-sm text-[#43210D]/70 font-sans leading-relaxed">
+            {description}
+          </p>
+        </div>
+        <button
+          onClick={onGoToLogin}
+          className="w-full bg-[#43210D] text-white font-extrabold py-3.5 px-6 rounded-2xl hover:bg-[#5a2e13] transition-all shadow-md uppercase tracking-wider text-xs flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98]"
+        >
+          SOLICITAR NOVO LINK
+        </button>
+      </div>
+    );
   };
 
   return (
@@ -423,25 +463,7 @@ const SetPasswordForm = ({ oobCode, onGoToLogin }: { oobCode: string | null; onG
             </button>
           </div>
         ) : oobCodeError ? (
-          <div className="text-center space-y-6">
-            <div className="w-16 h-16 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center mx-auto shadow-inner">
-              <AlertCircle size={36} />
-            </div>
-            <div>
-              <h2 className="text-xl font-extrabold text-[#43210D] font-heading mb-2">
-                Link Expirado ou Já Utilizado
-              </h2>
-              <p className="text-xs sm:text-sm text-[#43210D]/70 font-sans leading-relaxed">
-                Este link expirou ou já foi utilizado. Por segurança, os links de configuração possuem validade temporária.
-              </p>
-            </div>
-            <button
-              onClick={onGoToLogin}
-              className="w-full bg-[#43210D] text-white font-extrabold py-3.5 px-6 rounded-2xl hover:bg-[#5a2e13] transition-all shadow-md uppercase tracking-wider text-xs flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98]"
-            >
-              SOLICITAR NOVO LINK
-            </button>
-          </div>
+          renderOobErrorState()
         ) : (
           <div>
             <div className="text-center mb-6">
@@ -588,20 +610,21 @@ const AdminLoginForm = ({ onGoogleLogin }: { onGoogleLogin: () => void }) => {
 
     setIsSubmitting(true);
     try {
-      await sendCustomAuthEmail({
+      const res = await sendCustomAuthEmail({
         type: 'reset_password',
         email: cleanEmail,
       });
-      try {
-        await sendPasswordResetEmail(auth, cleanEmail, getActionCodeSettings());
-      } catch (fbErr) {
-        console.warn("Fallback sendPasswordResetEmail warning:", fbErr);
+      if (res && res.success) {
+        setForgotSuccess(true);
+      } else {
+        const errorMsg = res?.error || 'Erro ao enviar e-mail pelo servidor SMTP. Verifique as configurações.';
+        alert(`Erro ao enviar e-mail: ${errorMsg}`);
       }
     } catch (error: any) {
       console.error('Password reset link trigger error:', error);
+      alert('Erro ao solicitar redefinição de senha. Tente novamente.');
     } finally {
       setIsSubmitting(false);
-      setForgotSuccess(true);
     }
   };
 
@@ -4097,15 +4120,22 @@ const UsersManager = ({ currentUser }: { currentUser: AdminUser }) => {
         createdAt: serverTimestamp(),
       });
 
+      let emailSentSuccess = false;
+      let emailError = '';
       try {
-        await sendCustomAuthEmail({
+        const res = await sendCustomAuthEmail({
           type: 'invite',
           email: cleanEmail,
           firstName: newUser.firstName,
         });
-        await sendPasswordResetEmail(auth, cleanEmail, getActionCodeSettings());
-      } catch (sendErr) {
+        if (res && res.success) {
+          emailSentSuccess = true;
+        } else {
+          emailError = res?.error || 'Não foi possível enviar e-mail via SMTP.';
+        }
+      } catch (sendErr: any) {
         console.warn("Could not dispatch initial invite email:", sendErr);
+        emailError = sendErr?.message || 'Erro de conexão SMTP.';
       }
 
       setIsAddModalOpen(false);
@@ -4121,7 +4151,11 @@ const UsersManager = ({ currentUser }: { currentUser: AdminUser }) => {
       });
 
       if (typeof window !== 'undefined' && (window as any).showAdminToast) {
-        (window as any).showAdminToast('Usuário criado com sucesso. Um link para criação da senha foi enviado para o e-mail informado.', 'success');
+        if (emailSentSuccess) {
+          (window as any).showAdminToast('Usuário criado com sucesso. O e-mail com o link de acesso foi enviado via SMTP.', 'success');
+        } else {
+          (window as any).showAdminToast(`Usuário cadastrado, porém o e-mail não foi enviado via SMTP: ${emailError}`, 'warning');
+        }
       }
     } catch (error) {
       if (typeof window !== 'undefined' && (window as any).showAdminToast) {
@@ -4136,19 +4170,25 @@ const UsersManager = ({ currentUser }: { currentUser: AdminUser }) => {
   const handleResendAccessLink = async (userObj: any) => {
     try {
       const userFirstName = userObj.firstName || (userObj.displayName ? userObj.displayName.split(' ')[0] : '');
-      await sendCustomAuthEmail({
+      const res = await sendCustomAuthEmail({
         type: 'invite',
         email: userObj.email.trim(),
         firstName: userFirstName,
       });
-      await sendPasswordResetEmail(auth, userObj.email.trim(), getActionCodeSettings());
-      if (typeof window !== 'undefined' && (window as any).showAdminToast) {
-        (window as any).showAdminToast('Um novo link de configuração de senha foi enviado.', 'success');
+      if (res && res.success) {
+        if (typeof window !== 'undefined' && (window as any).showAdminToast) {
+          (window as any).showAdminToast('Um novo e-mail de convite foi enviado via SMTP com sucesso.', 'success');
+        }
+      } else {
+        const errorMsg = res?.error || 'Erro no envio do e-mail SMTP.';
+        if (typeof window !== 'undefined' && (window as any).showAdminToast) {
+          (window as any).showAdminToast(`Falha ao enviar e-mail: ${errorMsg}`, 'error');
+        }
       }
     } catch (err: any) {
       console.error("Error resending access link:", err);
       if (typeof window !== 'undefined' && (window as any).showAdminToast) {
-        (window as any).showAdminToast('Não foi possível reenviar o link. Verifique se o e-mail é válido.', 'error');
+        (window as any).showAdminToast('Não foi possível reenviar o e-mail via SMTP.', 'error');
       }
     } finally {
       setResendConfirmUser(null);
@@ -4158,19 +4198,25 @@ const UsersManager = ({ currentUser }: { currentUser: AdminUser }) => {
   const handleSendResetPasswordLink = async (userObj: any) => {
     try {
       const userFirstName = userObj.firstName || (userObj.displayName ? userObj.displayName.split(' ')[0] : '');
-      await sendCustomAuthEmail({
+      const res = await sendCustomAuthEmail({
         type: 'reset_password',
         email: userObj.email.trim(),
         firstName: userFirstName,
       });
-      await sendPasswordResetEmail(auth, userObj.email.trim(), getActionCodeSettings());
-      if (typeof window !== 'undefined' && (window as any).showAdminToast) {
-        (window as any).showAdminToast('Link de redefinição enviado com sucesso.', 'success');
+      if (res && res.success) {
+        if (typeof window !== 'undefined' && (window as any).showAdminToast) {
+          (window as any).showAdminToast('Link de redefinição enviado com sucesso via SMTP.', 'success');
+        }
+      } else {
+        const errorMsg = res?.error || 'Erro no envio do e-mail SMTP.';
+        if (typeof window !== 'undefined' && (window as any).showAdminToast) {
+          (window as any).showAdminToast(`Falha ao enviar e-mail: ${errorMsg}`, 'error');
+        }
       }
     } catch (err: any) {
       console.error("Error sending reset password link:", err);
       if (typeof window !== 'undefined' && (window as any).showAdminToast) {
-        (window as any).showAdminToast('Não foi possível enviar o link de redefinição.', 'error');
+        (window as any).showAdminToast('Não foi possível enviar o link de redefinição via SMTP.', 'error');
       }
     } finally {
       setResetConfirmUser(null);

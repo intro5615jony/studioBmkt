@@ -1,0 +1,151 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400&family=Syne:wght@700;800&family=Space+Grotesk:wght@500;700&display=swap');
+
+@theme {
+  --font-sans: "Montserrat", sans-serif;
+  --font-heading: "Syne", "Montserrat", sans-serif;
+  --font-display: "Syne", sans-serif;
+  --font-mono: "Space Grotesk", monospace;
+  
+  /* Official Studio B Brand Palette */
+  --color-warm-bg: #F3EDE0;        /* Main Off-White Warm Paper Canvas */
+  --color-cocoa: #43210D;          /* Deep Brown Cocoa / Main High Contrast Text */
+  --color-yellow-vibrant: #FFC400;   /* Primary Action CTA Yellow */
+  --color-terracotta: #E17541;     /* Terracotta Secondary Accent / Tags */
+  --color-caramel: #CE892C;        /* Caramel Accent Border */
+  --color-yellow-burnt: #F8C84D;    /* Warm Burnt Yellow Accent */
+}
+
+:root {
+  --bg-main: #F3EDE0;
+  --text-cocoa: #43210D;
+  --brand-yellow: #FFC400;
+  --brand-terracotta: #E17541;
+  --brand-caramel: #CE892C;
+
+  /* Admin & Global Theme variables */
+  --color-bg: #F3EDE0;
+  --color-surface: #FCFAF6;
+  --color-surface-muted: #EFE8DA;
+  --color-surface-hover: #E7DFC8;
+  --color-border: #D8CEB9;
+  --color-ink: #43210D;
+  --color-accent: #FFC400;
+  --color-on-accent: #43210D;
+  --color-secondary: #E17541;
+  --color-error: #D32F2F;
+  --color-success: #2E7D32;
+  --color-stat-blue: #0284C7;
+  --color-stat-purple: #7C3AED;
+  --color-stat-orange: #EA580C;
+  --color-stat-pink: #DB2777;
+}
+
+.dark {
+  --color-bg: #1C120C;
+  --color-surface: #2A1D13;
+  --color-surface-muted: #38281C;
+  --color-surface-hover: #483425;
+  --color-border: #574130;
+  --color-ink: #F3EDE0;
+  --color-accent: #FFC400;
+  --color-on-accent: #1C120C;
+  --color-secondary: #E17541;
+  --color-error: #EF4444;
+  --color-success: #10B981;
+}
+
+.bg-accent-gradient {
+  background: linear-gradient(135deg, #FFC400 0%, #E17541 100%);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* Custom Cursor matching user image: Black pointer arrow with thick white outline & shadow */
+*, html, body, a, button, input, select, textarea, [role="button"], label {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cdefs%3E%3Cfilter id='shadow' x='-20%25' y='-20%25' width='160%25' height='160%25'%3E%3CfeDropShadow dx='1.5' dy='2' stdDeviation='1.5' flood-color='%23000000' flood-opacity='0.4'/%3E%3C/filter%3E%3C/defs%3E%3Cg filter='url(%23shadow)'%3E%3Cpath d='M3 2 L11 25 L16.5 17.5 L25.5 15 Z' fill='%23ffffff' stroke='%23ffffff' stroke-width='5' stroke-linejoin='round' stroke-linecap='round'/%3E%3Cpath d='M3 2 L11 25 L16.5 17.5 L25.5 15 Z' fill='%23000000' stroke='%23000000' stroke-width='1.5' stroke-linejoin='round' stroke-linecap='round'/%3E%3C/g%3E%3C/svg%3E") 3 2, auto !important;
+}
+
+body {
+  font-family: 'Montserrat', sans-serif;
+  background-color: #F3EDE0;
+  color: #43210D;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* Typography Utility Classes */
+h1, h2, h3, h4, .font-heading {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.font-sans {
+  font-family: 'Montserrat', sans-serif;
+}
+
+.font-display-special {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+}
+
+.font-mono-tech {
+  font-family: 'Space Grotesk', monospace;
+  letter-spacing: 0.05em;
+}
+
+/* Honeycomb Clip-path & Background Utilities */
+.clip-hex {
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+}
+
+.bg-honeycomb-pattern {
+  background-size: 32px 56px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='56' viewBox='0 0 32 56'%3E%3Cg fill='none' stroke='%23CE892C' stroke-width='0.75' stroke-opacity='0.2'%3E%3Cpath d='M16 0l16 9.23v18.46L16 36.92 0 27.69V9.23zM16 36.92l16 9.23v18.46L16 64.61 0 55.38V36.92z'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+.bg-honeycomb-dark {
+  background-size: 32px 56px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='56' viewBox='0 0 32 56'%3E%3Cg fill='none' stroke='%23FFC400' stroke-width='0.75' stroke-opacity='0.15'%3E%3Cpath d='M16 0l16 9.23v18.46L16 36.92 0 27.69V9.23zM16 36.92l16 9.23v18.46L16 64.61 0 55.38V36.92z'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #F3EDE0;
+}
+::-webkit-scrollbar-thumb {
+  background: #CE892C;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #43210D;
+}
+
+/* Marquee Infinite Loop Animation */
+@keyframes marquee {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  display: flex;
+  width: max-content;
+  animation: marquee 25s linear infinite;
+}
+
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
+
+

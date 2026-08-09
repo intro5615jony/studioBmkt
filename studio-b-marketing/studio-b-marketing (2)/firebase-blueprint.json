@@ -1,0 +1,121 @@
+{
+  "entities": {
+    "Brand": {
+      "title": "Brand",
+      "description": "Marcas que confiam no Studio B",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Nome da marca" },
+        "logoUrl": { "type": "string", "description": "URL do logo da marca" },
+        "order": { "type": "number", "description": "Ordem de exibição" }
+      },
+      "required": ["name", "logoUrl"]
+    },
+    "Service": {
+      "title": "Service",
+      "description": "Serviços oferecidos pelo Studio B",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "description": "Título do serviço" },
+        "description": { "type": "string", "description": "Descrição detalhada" },
+        "iconName": { "type": "string", "description": "Nome do ícone da Lucide" },
+        "order": { "type": "number", "description": "Ordem de exibição" }
+      },
+      "required": ["title", "description", "iconName"]
+    },
+    "Project": {
+      "title": "Project",
+      "description": "Projetos realizados pelo Studio B",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "description": "Título do projeto" },
+        "category": { "type": "string", "description": "Categoria do projeto" },
+        "color": { "type": "string", "description": "Classe de cor do Tailwind (ex: bg-blue-500)" },
+        "imageUrl": { "type": "string", "description": "URL da imagem do projeto" },
+        "description": { "type": "string", "description": "Descrição do projeto" },
+        "order": { "type": "number", "description": "Ordem de exibição" }
+      },
+      "required": ["title", "category", "color"]
+    },
+    "Testimonial": {
+      "title": "Testimonial",
+      "description": "Depoimentos de clientes",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Nome do cliente" },
+        "role": { "type": "string", "description": "Cargo ou empresa" },
+        "text": { "type": "string", "description": "Texto do depoimento" },
+        "avatarUrl": { "type": "string", "description": "URL da foto do cliente" },
+        "order": { "type": "number", "description": "Ordem de exibição" }
+      },
+      "required": ["name", "role", "text"]
+    },
+    "BlogPost": {
+      "title": "BlogPost",
+      "description": "Artigos do blog",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "description": "Título do post" },
+        "description": { "type": "string", "description": "Resumo do post" },
+        "category": { "type": "string", "description": "Categoria" },
+        "author": { "type": "string", "description": "Autor do post" },
+        "time": { "type": "string", "description": "Tempo de leitura (ex: 5 min)" },
+        "date": { "type": "string", "description": "Data de publicação" },
+        "content": { "type": "string", "description": "Conteúdo em HTML ou Markdown" },
+        "imageUrl": { "type": "string", "description": "URL da imagem de capa" },
+        "tags": { "type": "array", "items": { "type": "string" }, "description": "Tags do post" },
+        "published": { "type": "boolean", "description": "Se o post está publicado" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Data de criação" }
+      },
+      "required": ["title", "content", "author"]
+    },
+    "Newsletter": {
+      "title": "Newsletter",
+      "description": "Inscrições na newsletter",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "format": "email", "description": "E-mail do inscrito" },
+        "subscribedAt": { "type": "string", "format": "date-time", "description": "Data da inscrição" }
+      },
+      "required": ["email", "subscribedAt"]
+    },
+    "User": {
+      "title": "User",
+      "description": "Usuários do sistema administrativo",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "format": "email", "description": "E-mail do usuário" },
+        "role": { "type": "string", "enum": ["admin", "editor"], "description": "Papel do usuário" },
+        "uid": { "type": "string", "description": "UID do Firebase Auth" }
+      },
+      "required": ["email", "role", "uid"]
+    },
+    "Proposal": {
+      "title": "Proposal",
+      "description": "Formulário de contato / briefing de projeto recebido do site",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Nome do contato" },
+        "company": { "type": "string", "description": "Empresa do contato" },
+        "email": { "type": "string", "description": "E-mail de contato" },
+        "phone": { "type": "string", "description": "Telefone ou WhatsApp" },
+        "segment": { "type": "string", "description": "Segmento da empresa" },
+        "services": { "type": "array", "items": { "type": "string" }, "description": "Serviços/módulos de interesse" },
+        "message": { "type": "string", "description": "Resumo do projeto ou mensagem" },
+        "status": { "type": "string", "description": "Status do lead (Novo, Em Atendimento, Concluído, Arquivado)" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Data de envio" }
+      },
+      "required": ["name", "company", "message"]
+    }
+  },
+  "firestore": {
+    "brands": { "schema": "Brand", "description": "Coleção de marcas" },
+    "services": { "schema": "Service", "description": "Coleção de serviços" },
+    "projects": { "schema": "Project", "description": "Coleção de projetos" },
+    "testimonials": { "schema": "Testimonial", "description": "Coleção de depoimentos" },
+    "posts": { "schema": "BlogPost", "description": "Coleção de posts do blog" },
+    "newsletter": { "schema": "Newsletter", "description": "Coleção de e-mails da newsletter" },
+    "users": { "schema": "User", "description": "Coleção de usuários administrativos" },
+    "proposals": { "schema": "Proposal", "description": "Coleção de propostas/leads recebidos pelo site" }
+  }
+}

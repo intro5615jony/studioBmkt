@@ -196,8 +196,14 @@ const handleFirestoreError = (error: unknown, operationType: OperationType, path
   throw new Error(JSON.stringify(errInfo));
 };
 
-const resizeImage = (base64Str: string, maxWidth = 400, maxHeight = 400): Promise<string> => {
+const resizeImage = (base64Str: string, maxWidth = 400, maxHeight = 400, mimeType?: string): Promise<string> => {
   return new Promise((resolve) => {
+    // SVGs do not need canvas rasterization/resizing, keep raw vector Data URL intact
+    if (base64Str.startsWith('data:image/svg+xml') || mimeType === 'image/svg+xml') {
+      resolve(base64Str);
+      return;
+    }
+
     const img = new Image();
     img.src = base64Str;
     img.onload = () => {
@@ -217,11 +223,27 @@ const resizeImage = (base64Str: string, maxWidth = 400, maxHeight = 400): Promis
         }
       }
 
-      canvas.width = width;
-      canvas.height = height;
+      canvas.width = Math.round(width);
+      canvas.height = Math.round(height);
       const ctx = canvas.getContext('2d');
-      ctx?.drawImage(img, 0, 0, width, height);
-      resolve(canvas.toDataURL('image/jpeg', 0.7));
+      if (ctx) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height); // Ensure canvas background is completely transparent
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      }
+
+      // Check if source is explicitly JPEG/JPG without alpha channel
+      const isJpeg = mimeType === 'image/jpeg' || mimeType === 'image/jpg' || base64Str.startsWith('data:image/jpeg');
+
+      if (isJpeg) {
+        resolve(canvas.toDataURL('image/jpeg', 0.85));
+      } else {
+        // Export as PNG to preserve full 32-bit RGBA alpha transparency
+        resolve(canvas.toDataURL('image/png'));
+      }
+    };
+
+    img.onerror = () => {
+      resolve(base64Str);
     };
   });
 };
@@ -1770,7 +1792,7 @@ const BrandsManager = () => {
     if (file) {
       const reader = new FileReader();
       reader.onloadend = async () => {
-        const resized = await resizeImage(reader.result as string, 400, 400);
+        const resized = await resizeImage(reader.result as string, 400, 400, file.type);
         setCurrentBrand({ ...currentBrand, logoUrl: resized });
       };
       reader.readAsDataURL(file);
@@ -1803,7 +1825,7 @@ const BrandsManager = () => {
             reader.readAsDataURL(file);
           });
 
-          const logoUrl = await resizeImage(rawUrl, 400, 400);
+          const logoUrl = await resizeImage(rawUrl, 400, 400, file.type);
           const name = formatFileNameToTitle(file.name);
           
           await addDoc(collection(db, 'brands'), {
@@ -1837,7 +1859,7 @@ const BrandsManager = () => {
             <input 
               type="file"
               multiple
-              accept="image/*"
+              accept="image/png, image/webp, image/svg+xml, image/jpeg, image/*"
               onChange={handleBulkUpload}
               className="hidden"
               id="bulk-brand-upload"
@@ -2019,7 +2041,7 @@ const BrandsManager = () => {
               <div className="relative">
                 <input 
                   type="file"
-                  accept="image/*"
+                  accept="image/png, image/webp, image/svg+xml, image/jpeg, image/*"
                   onChange={handleFileChange}
                   className="hidden"
                   id="brand-logo-upload"

@@ -122,7 +122,7 @@ export const QuemSomos: React.FC<QuemSomosProps> = ({ onOpenModal }) => {
             >
               <div className="relative w-full max-w-md aspect-[3/4] rounded-3xl overflow-hidden border-2 border-[#CE892C]/40 bg-[#43210D]">
                 <img
-                  src="/rebeca.jpeg"
+                  src="/FOTO REBECA.jpeg"
                   alt="Rebeca - Fundadora & Diretora Criativa"
                   className="w-full h-full object-cover"
                   referrerPolicy="no-referrer"
@@ -148,7 +148,7 @@ export const QuemSomos: React.FC<QuemSomosProps> = ({ onOpenModal }) => {
             >
               <div className="relative w-full max-w-md aspect-[3/4] rounded-3xl overflow-hidden border-2 border-[#CE892C]/40 bg-[#43210D]">
                 <img
-                  src="/joao-pedro.png"
+                  src="/FOTO JOAO.png"
                   alt="João Pedro - Comercial & Soluções Digitais"
                   className="w-full h-full object-cover"
                   referrerPolicy="no-referrer"

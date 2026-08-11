@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+
+Disallow: /admin
+Disallow: /admin/*
+Disallow: /api/*
+Disallow: /login
+Disallow: /admin/definir-senha
+
+Sitemap: https://www.studiobmkt.com.br/sitemap.xml

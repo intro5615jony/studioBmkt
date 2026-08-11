@@ -1,38 +1,51 @@
 import dotenv from "dotenv";
-import admin from "firebase-admin";
+import { getApps, initializeApp, cert } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 import { sendAuthEmail } from "../../server/emailService.js";
 
 dotenv.config();
 
-// Initialize Firebase Admin SDK if not initialized
-if (!admin.apps.length) {
-  const serviceAccountEnv = process.env.FIREBASE_SERVICE_ACCOUNT || process.env.FIREBASE_CREDENTIALS;
-  if (serviceAccountEnv) {
-    try {
-      const parsed = JSON.parse(serviceAccountEnv);
-      admin.initializeApp({
-        credential: admin.credential.cert(parsed),
-        projectId: parsed.project_id || "gen-lang-client-0440968965",
-      });
-    } catch (e) {
-      console.warn("[FIREBASE ADMIN] Could not parse service account JSON, initializing default:", e);
-      admin.initializeApp({
-        projectId: process.env.FIREBASE_PROJECT_ID || "gen-lang-client-0440968965",
-      });
+function getAdminAuth() {
+  if (!getApps().length) {
+    const projectId = process.env.FIREBASE_PROJECT_ID;
+    const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+    const privateKey = process.env.FIREBASE_PRIVATE_KEY;
+
+    // Check JSON service account fallback if individual env vars are not set
+    const serviceAccountEnv = process.env.FIREBASE_SERVICE_ACCOUNT || process.env.FIREBASE_CREDENTIALS;
+
+    if (!projectId || !clientEmail || !privateKey) {
+      if (serviceAccountEnv) {
+        try {
+          const parsed = JSON.parse(serviceAccountEnv);
+          initializeApp({
+            credential: cert(parsed),
+          });
+          return { auth: getAuth() };
+        } catch (e) {
+          console.error("[FIREBASE ADMIN] Erro ao analisar FIREBASE_SERVICE_ACCOUNT:", e);
+        }
+      }
+      return {
+        error: "Configuração do Firebase Admin incompleta no servidor (FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL e/ou FIREBASE_PRIVATE_KEY ausentes)."
+      };
     }
-  } else if (process.env.FIREBASE_PRIVATE_KEY && process.env.FIREBASE_CLIENT_EMAIL) {
-    admin.initializeApp({
-      credential: admin.credential.cert({
-        projectId: process.env.FIREBASE_PROJECT_ID || "gen-lang-client-0440968965",
-        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-        privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
-      }),
-    });
-  } else {
-    admin.initializeApp({
-      projectId: process.env.FIREBASE_PROJECT_ID || "gen-lang-client-0440968965",
-    });
+
+    try {
+      initializeApp({
+        credential: cert({
+          projectId,
+          clientEmail,
+          privateKey: privateKey.replace(/\\n/g, "\n"),
+        }),
+      });
+    } catch (e: any) {
+      console.error("[FIREBASE ADMIN] Erro ao inicializar Firebase Admin SDK:", e);
+      return { error: "Erro ao inicializar Firebase Admin SDK." };
+    }
   }
+
+  return { auth: getAuth() };
 }
 
 function resolveBaseAppUrl(req: any): string {
@@ -69,31 +82,41 @@ export default async function handler(req: any, res: any) {
     handleCodeInApp: true,
   };
 
+  const adminAuthResult = getAdminAuth();
+  if (adminAuthResult.error) {
+    console.warn("[FIREBASE ADMIN]", adminAuthResult.error);
+  }
+
+  const auth = adminAuthResult.auth;
   let generatedLink = '';
 
   // 1. Ensure user exists in Firebase Auth before link generation
-  try {
+  if (auth) {
     try {
-      await admin.auth().getUserByEmail(cleanEmail);
-    } catch (getUserErr: any) {
-      if (getUserErr.code === 'auth/user-not-found') {
-        console.log(`[FIREBASE ADMIN] Creating user in Auth: ${cleanEmail}`);
-        const tempPassword = `StudioB!${Math.random().toString(36).substring(2, 10)}${Math.floor(Math.random() * 1000)}`;
-        await admin.auth().createUser({
-          email: cleanEmail,
-          password: tempPassword,
-          displayName: firstName || cleanEmail.split('@')[0],
-        });
+      try {
+        await auth.getUserByEmail(cleanEmail);
+      } catch (getUserErr: any) {
+        if (getUserErr.code === 'auth/user-not-found') {
+          console.log(`[FIREBASE ADMIN] Creating user in Auth: ${cleanEmail}`);
+          const tempPassword = `StudioB!${Math.random().toString(36).substring(2, 10)}${Math.floor(Math.random() * 1000)}`;
+          await auth.createUser({
+            email: cleanEmail,
+            password: tempPassword,
+            displayName: firstName || cleanEmail.split('@')[0],
+          });
+        }
       }
-    }
 
-    // 2. Generate official reset link via Firebase Admin SDK
-    generatedLink = await admin.auth().generatePasswordResetLink(cleanEmail, actionCodeSettings);
-    console.log(`[FIREBASE ADMIN] Link oficial gerado com sucesso via Firebase Admin SDK para ${cleanEmail}`);
-  } catch (adminErr: any) {
-    console.warn("[FIREBASE ADMIN] Falha no Admin SDK, tentando REST API:", adminErr.message || adminErr);
-    
-    // Fallback using Firebase Identity Toolkit REST API
+      // 2. Generate official reset link via Firebase Admin SDK
+      generatedLink = await auth.generatePasswordResetLink(cleanEmail, actionCodeSettings);
+      console.log(`[FIREBASE ADMIN] Link oficial gerado com sucesso via Firebase Admin SDK para ${cleanEmail}`);
+    } catch (adminErr: any) {
+      console.warn("[FIREBASE ADMIN] Exceção ao gerar link via Admin SDK:", adminErr.message || adminErr);
+    }
+  }
+
+  // Fallback to REST API if Admin SDK was unable to generate the link
+  if (!generatedLink) {
     try {
       const apiKey = process.env.VITE_FIREBASE_API_KEY || "AIzaSyCeMNtT4vo3-njJJiFLT2oCuXVFx1ZATng";
       let fbRes = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=${apiKey}`, {
@@ -133,18 +156,17 @@ export default async function handler(req: any, res: any) {
       }
 
       if (fbRes.ok && fbData.oobLink) {
-        // Use the EXACT official oobLink without altering or stripping parameters
         generatedLink = fbData.oobLink;
       }
     } catch (fallbackErr) {
-      console.error("[FIREBASE API] Exceção no envio do oobCode:", fallbackErr);
+      console.error("[FIREBASE API] Exceção no envio do oobCode via REST API:", fallbackErr);
     }
   }
 
   if (!generatedLink) {
     return res.status(500).json({
       success: false,
-      error: 'Não foi possível gerar o link de acesso no Firebase Auth.'
+      error: 'Não foi possível gerar o link de acesso no Firebase Auth. Verifique se as variáveis de ambiente FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL e FIREBASE_PRIVATE_KEY estão configuradas na Vercel.'
     });
   }
 
@@ -159,4 +181,3 @@ export default async function handler(req: any, res: any) {
 
   return res.status(200).json(result);
 }
-

@@ -904,7 +904,24 @@ const Admin = () => {
           // Check if user exists in our 'users' collection by UID
           const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
           if (userDoc.exists()) {
-            setAdminData(userDoc.data() as AdminUser);
+            const userData = userDoc.data() as AdminUser;
+            if (userData.accessStatus === 'Convite enviado') {
+              const updatedData: AdminUser = {
+                ...userData,
+                accessStatus: 'Ativo'
+              };
+              try {
+                await updateDoc(doc(db, 'users', currentUser.uid), {
+                  accessStatus: 'Ativo',
+                  updatedAt: serverTimestamp()
+                });
+              } catch (updErr) {
+                console.warn("Could not update accessStatus on login:", updErr);
+              }
+              setAdminData(updatedData);
+            } else {
+              setAdminData(userData);
+            }
           } else {
             // Check if there's a pre-created user with this email
             if (currentUser.email === 'contatorebecafurtado@gmail.com') {
@@ -920,38 +937,39 @@ const Admin = () => {
                 agencyRole: 'Administrador',
                 siteRole: 'admin',
                 birthDate: '1990-01-01',
-                permissions: 'Acesso total ao sistema'
+                permissions: 'Acesso total ao sistema',
+                accessStatus: 'Ativo'
               };
               await setDoc(doc(db, 'users', currentUser.uid), newAdmin);
               setAdminData(newAdmin);
             } else {
-              // Check if the user was added by email but hasn't logged in yet
-              const usersRef = collection(db, 'users');
-              // We'll use a snapshot to find the user by email since we don't have their UID as doc ID yet
-              // In a real app, we'd use a query, but we need to handle the case where the doc ID is random
-              const { getDocs, where, query: fsQuery } = await import('firebase/firestore');
-              const q = fsQuery(usersRef, where('email', '==', currentUser.email));
-              const querySnapshot = await getDocs(q);
-              
-              if (!querySnapshot.empty) {
-                const existingUserDoc = querySnapshot.docs[0];
-                const userData = existingUserDoc.data() as AdminUser;
+              // Legacy doc check wrapped safely
+              try {
+                const { getDocs, where, query: fsQuery } = await import('firebase/firestore');
+                const usersRef = collection(db, 'users');
+                const q = fsQuery(usersRef, where('email', '==', currentUser.email));
+                const querySnapshot = await getDocs(q);
                 
-                // Update the document to use the UID as the ID for future lookups
-                // and add the UID to the data
-                const updatedData = {
-                  ...userData,
-                  uid: currentUser.uid,
-                  photoURL: currentUser.photoURL || userData.photoURL || '',
-                  updatedAt: serverTimestamp()
-                };
-                
-                await setDoc(doc(db, 'users', currentUser.uid), updatedData);
-                // Optionally delete the old document with random ID
-                await deleteDoc(doc(db, 'users', existingUserDoc.id));
-                
-                setAdminData(updatedData);
-              } else {
+                if (!querySnapshot.empty) {
+                  const existingUserDoc = querySnapshot.docs[0];
+                  const userData = existingUserDoc.data() as AdminUser;
+                  
+                  const updatedData = {
+                    ...userData,
+                    uid: currentUser.uid,
+                    accessStatus: 'Ativo',
+                    photoURL: currentUser.photoURL || userData.photoURL || '',
+                    updatedAt: serverTimestamp()
+                  };
+                  
+                  await setDoc(doc(db, 'users', currentUser.uid), updatedData);
+                  await deleteDoc(doc(db, 'users', existingUserDoc.id));
+                  setAdminData(updatedData);
+                } else {
+                  setAdminData(null);
+                }
+              } catch (legacyErr) {
+                console.warn("Legacy user lookup unavailable or restricted:", legacyErr);
                 setAdminData(null);
               }
             }
@@ -4111,17 +4129,11 @@ const UsersManager = ({ currentUser }: { currentUser: AdminUser }) => {
     const cleanEmail = newUser.email.trim();
 
     try {
-      await addDoc(collection(db, 'users'), {
-        ...newUser,
-        email: cleanEmail,
-        displayName: `${newUser.firstName} ${newUser.lastName}`,
-        role: newUser.siteRole,
-        accessStatus: 'Convite enviado',
-        createdAt: serverTimestamp(),
-      });
-
+      // 1. Dispatch invite email first, creating/fetching the Auth user and returning their real UID
       let emailSentSuccess = false;
       let emailError = '';
+      let targetUid: string | null = null;
+
       try {
         const res = await sendCustomAuthEmail({
           type: 'invite',
@@ -4130,12 +4142,47 @@ const UsersManager = ({ currentUser }: { currentUser: AdminUser }) => {
         });
         if (res && res.success) {
           emailSentSuccess = true;
+          if (res.uid) {
+            targetUid = res.uid;
+          }
         } else {
           emailError = res?.error || 'Não foi possível enviar e-mail via SMTP.';
         }
       } catch (sendErr: any) {
         console.warn("Could not dispatch initial invite email:", sendErr);
         emailError = sendErr?.message || 'Erro de conexão SMTP.';
+      }
+
+      if (!targetUid) {
+        throw new Error("Não foi possível obter o UID do Firebase Auth para o novo usuário.");
+      }
+
+      // 2. Create document explicitly at users/{targetUid}
+      const userData = {
+        ...newUser,
+        uid: targetUid,
+        email: cleanEmail,
+        displayName: `${newUser.firstName} ${newUser.lastName}`.trim(),
+        role: newUser.siteRole || 'editor',
+        siteRole: newUser.siteRole || 'editor',
+        accessStatus: 'Convite enviado',
+        createdAt: serverTimestamp(),
+      };
+
+      await setDoc(doc(db, 'users', targetUid), userData);
+
+      // 3. Clean up any legacy document with a random ID for this email
+      try {
+        const { getDocs, where, query: fsQuery } = await import('firebase/firestore');
+        const legacyQuery = fsQuery(collection(db, 'users'), where('email', '==', cleanEmail));
+        const legacySnap = await getDocs(legacyQuery);
+        for (const legacyDoc of legacySnap.docs) {
+          if (legacyDoc.id !== targetUid) {
+            await deleteDoc(doc(db, 'users', legacyDoc.id));
+          }
+        }
+      } catch (legacyErr) {
+        console.warn("Legacy doc cleanup check skipped:", legacyErr);
       }
 
       setIsAddModalOpen(false);
@@ -4154,12 +4201,12 @@ const UsersManager = ({ currentUser }: { currentUser: AdminUser }) => {
         if (emailSentSuccess) {
           (window as any).showAdminToast('Usuário criado com sucesso. O e-mail com o link de acesso foi enviado via SMTP.', 'success');
         } else {
-          (window as any).showAdminToast(`Usuário cadastrado, porém o e-mail não foi enviado via SMTP: ${emailError}`, 'warning');
+          (window as any).showAdminToast(`Usuário cadastrado com sucesso! Aviso de e-mail: ${emailError}`, 'warning');
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       if (typeof window !== 'undefined' && (window as any).showAdminToast) {
-        (window as any).showAdminToast('Erro ao adicionar usuário. Verifique se o e-mail é válido.', 'error');
+        (window as any).showAdminToast(`Erro ao adicionar usuário: ${error?.message || 'Verifique se o e-mail é válido.'}`, 'error');
       }
       handleFirestoreError(error, OperationType.CREATE, 'users');
     } finally {
@@ -4169,13 +4216,36 @@ const UsersManager = ({ currentUser }: { currentUser: AdminUser }) => {
 
   const handleResendAccessLink = async (userObj: any) => {
     try {
+      const cleanEmail = userObj.email.trim();
       const userFirstName = userObj.firstName || (userObj.displayName ? userObj.displayName.split(' ')[0] : '');
       const res = await sendCustomAuthEmail({
         type: 'invite',
-        email: userObj.email.trim(),
+        email: cleanEmail,
         firstName: userFirstName,
       });
+
       if (res && res.success) {
+        // Migration check for legacy random ID docs
+        if (res.uid) {
+          const targetUid = res.uid;
+          const newDocRef = doc(db, 'users', targetUid);
+          const newDocSnap = await getDoc(newDocRef);
+
+          if (!newDocSnap.exists() || userObj.id !== targetUid) {
+            const migratedData = {
+              ...userObj,
+              uid: targetUid,
+              email: cleanEmail,
+              updatedAt: serverTimestamp()
+            };
+            delete migratedData.id;
+            await setDoc(newDocRef, migratedData);
+            if (userObj.id && userObj.id !== targetUid) {
+              await deleteDoc(doc(db, 'users', userObj.id));
+            }
+          }
+        }
+
         if (typeof window !== 'undefined' && (window as any).showAdminToast) {
           (window as any).showAdminToast('Um novo e-mail de convite foi enviado via SMTP com sucesso.', 'success');
         }
@@ -4197,13 +4267,34 @@ const UsersManager = ({ currentUser }: { currentUser: AdminUser }) => {
 
   const handleSendResetPasswordLink = async (userObj: any) => {
     try {
+      const cleanEmail = userObj.email.trim();
       const userFirstName = userObj.firstName || (userObj.displayName ? userObj.displayName.split(' ')[0] : '');
       const res = await sendCustomAuthEmail({
         type: 'reset_password',
-        email: userObj.email.trim(),
+        email: cleanEmail,
         firstName: userFirstName,
       });
+
       if (res && res.success) {
+        if (res.uid && userObj.id !== res.uid) {
+          const targetUid = res.uid;
+          const newDocRef = doc(db, 'users', targetUid);
+          const newDocSnap = await getDoc(newDocRef);
+          if (!newDocSnap.exists()) {
+            const migratedData = {
+              ...userObj,
+              uid: targetUid,
+              email: cleanEmail,
+              updatedAt: serverTimestamp()
+            };
+            delete migratedData.id;
+            await setDoc(newDocRef, migratedData);
+            if (userObj.id && userObj.id !== res.uid) {
+              await deleteDoc(doc(db, 'users', userObj.id));
+            }
+          }
+        }
+
         if (typeof window !== 'undefined' && (window as any).showAdminToast) {
           (window as any).showAdminToast('Link de redefinição enviado com sucesso via SMTP.', 'success');
         }
@@ -4266,12 +4357,30 @@ const UsersManager = ({ currentUser }: { currentUser: AdminUser }) => {
     setIsSaving(true);
     try {
       const { id, ...userData } = editingUser;
-      await updateDoc(doc(db, 'users', id), {
+      let targetDocId = id;
+      if (userData.uid && userData.uid !== id) {
+        targetDocId = userData.uid;
+      }
+
+      const updatedDoc = {
         ...userData,
-        displayName: `${userData.firstName} ${userData.lastName}`,
-        role: userData.siteRole,
+        uid: targetDocId,
+        displayName: `${userData.firstName || ''} ${userData.lastName || ''}`.trim(),
+        role: userData.siteRole || userData.role || 'editor',
+        siteRole: userData.siteRole || userData.role || 'editor',
         updatedAt: serverTimestamp(),
-      });
+      };
+
+      await setDoc(doc(db, 'users', targetDocId), updatedDoc);
+
+      if (id && id !== targetDocId) {
+        try {
+          await deleteDoc(doc(db, 'users', id));
+        } catch (delErr) {
+          console.warn("Could not remove legacy doc on update:", delErr);
+        }
+      }
+
       setIsEditModalOpen(false);
       setEditingUser(null);
       if (typeof window !== 'undefined' && (window as any).showAdminToast) {

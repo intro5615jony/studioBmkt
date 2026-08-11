@@ -89,22 +89,28 @@ export default async function handler(req: any, res: any) {
 
   const auth = adminAuthResult.auth;
   let generatedLink = '';
+  let authUid: string | null = null;
 
   // 1. Ensure user exists in Firebase Auth before link generation
   if (auth) {
     try {
+      let userRecord;
       try {
-        await auth.getUserByEmail(cleanEmail);
+        userRecord = await auth.getUserByEmail(cleanEmail);
       } catch (getUserErr: any) {
         if (getUserErr.code === 'auth/user-not-found') {
           console.log(`[FIREBASE ADMIN] Creating user in Auth: ${cleanEmail}`);
           const tempPassword = `StudioB!${Math.random().toString(36).substring(2, 10)}${Math.floor(Math.random() * 1000)}`;
-          await auth.createUser({
+          userRecord = await auth.createUser({
             email: cleanEmail,
             password: tempPassword,
             displayName: firstName || cleanEmail.split('@')[0],
           });
         }
+      }
+
+      if (userRecord) {
+        authUid = userRecord.uid;
       }
 
       // 2. Generate official reset link via Firebase Admin SDK
@@ -133,7 +139,7 @@ export default async function handler(req: any, res: any) {
 
       if (!fbRes.ok && fbData.error?.message?.includes('EMAIL_NOT_FOUND')) {
         const tempPassword = `StudioB!${Math.random().toString(36).substring(2, 10)}${Math.floor(Math.random() * 1000)}`;
-        await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${apiKey}`, {
+        const signUpRes = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${apiKey}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -142,6 +148,10 @@ export default async function handler(req: any, res: any) {
             returnSecureToken: true
           })
         });
+        const signUpData = await signUpRes.json();
+        if (signUpData?.localId) {
+          authUid = signUpData.localId;
+        }
 
         fbRes = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=${apiKey}`, {
           method: 'POST',
@@ -213,5 +223,9 @@ export default async function handler(req: any, res: any) {
     origin: baseUrl,
   });
 
-  return res.status(200).json(result);
+  return res.status(200).json({
+    ...result,
+    uid: authUid,
+    email: cleanEmail,
+  });
 }

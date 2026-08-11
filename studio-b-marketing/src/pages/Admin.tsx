@@ -251,19 +251,19 @@ const resizeImage = (base64Str: string, maxWidth = 400, maxHeight = 400, mimeTyp
 const Modal = ({ isOpen, onClose, title, children, size = 'default' }: { isOpen: boolean, onClose: () => void, title: string, children: React.ReactNode, size?: 'default' | 'large' }) => {
   if (!isOpen) return null;
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-[var(--color-ink)]/80 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-6 bg-[var(--color-ink)]/80 backdrop-blur-sm">
       <motion.div 
-        initial={{ opacity: 0, scale: 0.9 }}
+        initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        className={`bg-[var(--color-surface)] border border-[var(--color-border)] rounded-[2.5rem] w-full ${size === 'large' ? 'max-w-4xl' : 'max-w-2xl'} overflow-hidden shadow-2xl`}
+        className={`bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl sm:rounded-[2.5rem] w-full ${size === 'large' ? 'max-w-4xl' : 'max-w-2xl'} overflow-hidden shadow-2xl max-h-[92vh] flex flex-col`}
       >
-        <div className="p-8 border-b border-[var(--color-border)] flex items-center justify-between">
-          <h3 className="text-2xl font-black tracking-tight">{title}</h3>
-          <button onClick={onClose} className="text-[var(--color-ink)]/40 hover:text-[var(--color-ink)] transition-colors">
-            <X size={24} />
+        <div className="p-4 sm:p-8 border-b border-[var(--color-border)] flex items-center justify-between shrink-0">
+          <h3 className="text-lg sm:text-2xl font-black tracking-tight font-heading text-[var(--color-ink)]">{title}</h3>
+          <button onClick={onClose} className="text-[var(--color-ink)]/40 hover:text-[var(--color-ink)] transition-colors p-1">
+            <X size={22} className="sm:w-6 sm:h-6" />
           </button>
         </div>
-        <div className="p-8 max-h-[70vh] overflow-y-auto">
+        <div className="p-4 sm:p-8 overflow-y-auto flex-1">
           {children}
         </div>
       </motion.div>
@@ -274,17 +274,17 @@ const Modal = ({ isOpen, onClose, title, children, size = 'default' }: { isOpen:
 const ConfirmModal = ({ isOpen, onClose, onConfirm, title, message }: { isOpen: boolean, onClose: () => void, onConfirm: () => void, title: string, message: string }) => {
   if (!isOpen) return null;
   return (
-    <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-[var(--color-ink)]/90 backdrop-blur-md">
+    <div className="fixed inset-0 z-[110] flex items-center justify-center p-3 sm:p-6 bg-[var(--color-ink)]/90 backdrop-blur-md">
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-[2rem] w-full max-w-md p-8 text-center shadow-2xl"
+        className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl sm:rounded-[2rem] w-full max-w-md p-5 sm:p-8 text-center shadow-2xl"
       >
-        <AlertCircle className="text-[var(--color-error)] mx-auto mb-6" size={48} />
-        <h3 className="text-xl font-black mb-2">{title}</h3>
-        <p className="text-[var(--color-ink)]/40 mb-8">{message}</p>
-        <div className="flex gap-4">
-          <button onClick={onClose} className="flex-1 py-3 rounded-xl font-bold text-[var(--color-ink)]/40 hover:bg-[var(--color-surface-hover)] transition-all">Cancelar</button>
+        <AlertCircle className="text-[var(--color-error)] mx-auto mb-4 sm:mb-6" size={40} />
+        <h3 className="text-lg sm:text-xl font-black mb-2 font-heading">{title}</h3>
+        <p className="text-xs sm:text-sm text-[var(--color-ink)]/60 mb-6">{message}</p>
+        <div className="flex gap-3 sm:gap-4">
+          <button onClick={onClose} className="flex-1 py-3 rounded-xl font-bold text-xs sm:text-sm text-[var(--color-ink)]/60 hover:bg-[var(--color-surface-hover)] transition-all">Cancelar</button>
           <button 
             onClick={() => {
               onConfirm();
@@ -1114,8 +1114,8 @@ const Admin = () => {
         </div>
       )}
 
-      {/* Sidebar */}
-      <aside className={`${isSidebarOpen ? 'w-64' : 'w-20'} bg-[var(--color-surface)] border-r border-[var(--color-border)] transition-all duration-300 flex flex-col z-30`}>
+      {/* Sidebar - Desktop Only */}
+      <aside className={`hidden md:flex ${isSidebarOpen ? 'w-64' : 'w-20'} bg-[var(--color-surface)] border-r border-[var(--color-border)] transition-all duration-300 flex-col z-30 shrink-0`}>
         <div className="p-5 flex items-center justify-between border-b border-[var(--color-border)]">
           <div className="flex items-center gap-3 overflow-hidden">
             <div className="w-10 h-10 bg-accent-gradient rounded-xl flex-shrink-0 flex items-center justify-center text-[var(--color-on-accent)] font-black text-xl shadow-sm font-heading">
@@ -1165,14 +1165,46 @@ const Admin = () => {
         </div>
       </aside>
 
+      {/* Mobile Fixed Bottom Navigation */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-[var(--color-surface)] border-t border-[var(--color-border)] shadow-2xl px-2 py-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))]">
+        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-0.5 px-1">
+          {menuItems.map((item) => {
+            const isActive = activeTab === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => setActiveTab(item.id as Tab)}
+                title={item.label}
+                aria-label={item.label}
+                className={`flex-shrink-0 p-3 rounded-2xl transition-all flex items-center justify-center cursor-pointer ${
+                  isActive
+                    ? 'bg-accent-gradient text-[var(--color-on-accent)] font-bold shadow-md scale-105'
+                    : 'text-[var(--color-ink)]/60 hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-ink)]'
+                }`}
+              >
+                <item.icon size={22} className="flex-shrink-0" />
+              </button>
+            );
+          })}
+          <button
+            onClick={handleLogout}
+            title="Sair"
+            aria-label="Sair"
+            className="flex-shrink-0 p-3 text-[var(--color-error)] hover:bg-[var(--color-error)]/10 rounded-2xl transition-all flex items-center justify-center cursor-pointer"
+          >
+            <LogOut size={22} className="flex-shrink-0" />
+          </button>
+        </div>
+      </nav>
+
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto p-6 md:p-10">
-        <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+      <main className="flex-1 overflow-y-auto p-3.5 sm:p-6 md:p-10 pb-[calc(6.5rem+env(safe-area-inset-bottom))] md:pb-10">
+        <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 sm:mb-8">
           <div>
-            <h2 className="text-3xl font-black tracking-tight font-heading text-[var(--color-ink)]">
+            <h2 className="text-2xl sm:text-3xl font-black tracking-tight font-heading text-[var(--color-ink)]">
               {activeTab === 'leads' ? 'Leads & Propostas' : activeTab === 'dashboard' ? 'Painel de Controle' : menuItems.find(m => m.id === activeTab)?.label}
             </h2>
-            <p className="text-[var(--color-ink)]/60 text-sm mt-1">
+            <p className="text-[var(--color-ink)]/60 text-xs sm:text-sm mt-1">
               {activeTab === 'dashboard' && 'Visão geral do desempenho e conteúdos do Studio B Marketing.'}
               {activeTab === 'leads' && 'Acompanhe as propostas e contatos recebidos através do site.'}
               {activeTab === 'brands' && 'Gerencie as marcas e empresas parceiras exibidas no site.'}
@@ -1184,17 +1216,17 @@ const Admin = () => {
               {activeTab === 'users' && 'Gerencie os usuários e administradores do painel.'}
             </p>
           </div>
-          <div className="flex items-center gap-3 self-end sm:self-auto">
+          <div className="flex items-center gap-2 sm:gap-3 justify-between sm:justify-start">
             <ThemeToggle />
-            <div className="flex items-center gap-3 bg-[var(--color-surface)] px-4 py-2.5 rounded-2xl border border-[var(--color-border)] shadow-xs">
+            <div className="flex items-center gap-2 sm:gap-3 bg-[var(--color-surface)] px-3 sm:px-4 py-2 sm:py-2.5 rounded-2xl border border-[var(--color-border)] shadow-xs">
               <div className="text-right hidden sm:block">
                 <p className="text-xs font-bold text-[var(--color-ink)]">{user.displayName}</p>
                 <p className="text-[10px] text-[var(--color-secondary)] font-semibold uppercase tracking-wider">{adminData.role}</p>
               </div>
               {user.photoURL ? (
-                <img src={user.photoURL} alt={user.displayName || ''} className="w-9 h-9 rounded-xl border border-[var(--color-border)] object-cover" />
+                <img src={user.photoURL} alt={user.displayName || ''} className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl border border-[var(--color-border)] object-cover" />
               ) : (
-                <div className="w-9 h-9 rounded-xl bg-[var(--color-accent)] text-[var(--color-on-accent)] font-bold flex items-center justify-center text-xs font-heading">
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[var(--color-accent)] text-[var(--color-on-accent)] font-bold flex items-center justify-center text-xs font-heading">
                   {user.displayName?.[0] || 'U'}
                 </div>
               )}
@@ -1202,7 +1234,7 @@ const Admin = () => {
           </div>
         </header>
 
-        <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-[2rem] p-6 sm:p-8 min-h-[600px] shadow-xs">
+        <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl sm:rounded-[2rem] p-4 sm:p-6 md:p-8 min-h-[450px] sm:min-h-[600px] shadow-xs">
           {activeTab === 'dashboard' && <DashboardOverview onNavigate={(tab) => setActiveTab(tab)} />}
           {activeTab === 'leads' && <LeadsManager />}
           {activeTab === 'brands' && <BrandsManager />}
@@ -1295,24 +1327,24 @@ const DashboardOverview = ({ onNavigate }: { onNavigate?: (tab: Tab) => void }) 
   ];
 
   return (
-    <div className="space-y-12">
-      <div className="bg-[var(--color-surface-muted)] border border-[var(--color-border)] p-8 rounded-3xl shadow-xs">
-        <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+    <div className="space-y-6 sm:space-y-12">
+      <div className="bg-[var(--color-surface-muted)] border border-[var(--color-border)] p-5 sm:p-8 rounded-2xl sm:rounded-3xl shadow-xs">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 sm:gap-6">
           <div>
-            <h3 className="text-xl font-bold font-heading mb-2">Configuração Inicial</h3>
-            <p className="text-[var(--color-ink)]/60 text-sm">Restaure as marcas e serviços padrão caso o banco de dados esteja vazio.</p>
+            <h3 className="text-lg sm:text-xl font-bold font-heading mb-1 sm:mb-2">Configuração Inicial</h3>
+            <p className="text-[var(--color-ink)]/60 text-xs sm:text-sm">Restaure as marcas e serviços padrão caso o banco de dados esteja vazio.</p>
           </div>
-          <div className="flex flex-col items-end gap-3">
+          <div className="flex flex-col items-stretch sm:items-end gap-2.5 w-full md:w-auto">
             <button 
               onClick={seedInitialData}
               disabled={isSeeding}
-              className="bg-accent-gradient text-[var(--color-on-accent)] px-8 py-4 rounded-xl font-bold flex items-center gap-2 hover:scale-105 transition-all shadow-md disabled:opacity-50 disabled:hover:scale-100"
+              className="bg-accent-gradient text-[var(--color-on-accent)] px-5 sm:px-8 py-3.5 sm:py-4 rounded-xl font-bold flex items-center justify-center gap-2 hover:scale-105 transition-all shadow-md disabled:opacity-50 disabled:hover:scale-100 text-xs sm:text-sm w-full sm:w-auto"
             >
-              {isSeeding ? <Loader2 className="animate-spin" size={20} /> : <Sparkles size={20} />}
+              {isSeeding ? <Loader2 className="animate-spin" size={18} /> : <Sparkles size={18} />}
               Restaurar Dados Iniciais
             </button>
             {seedMessage && (
-              <p className={`text-xs font-bold ${seedMessage.type === 'success' ? 'text-[var(--color-success)]' : 'text-[var(--color-error)]'}`}>
+              <p className={`text-xs font-bold text-center sm:text-right ${seedMessage.type === 'success' ? 'text-[var(--color-success)]' : 'text-[var(--color-error)]'}`}>
                 {seedMessage.text}
               </p>
             )}
@@ -1320,19 +1352,19 @@ const DashboardOverview = ({ onNavigate }: { onNavigate?: (tab: Tab) => void }) 
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="flex flex-col gap-3.5 sm:grid sm:grid-cols-2 lg:grid-cols-3 sm:gap-6">
         {statCards.map((stat) => (
           <div 
             key={stat.label} 
             onClick={() => onNavigate && onNavigate(stat.tab as Tab)}
-            className="bg-[var(--color-surface-muted)] border border-[var(--color-border)] p-8 rounded-3xl flex items-center justify-between group hover:border-[var(--color-accent)] transition-all cursor-pointer shadow-xs"
+            className="bg-[var(--color-surface-muted)] border border-[var(--color-border)] p-4 sm:p-8 rounded-2xl sm:rounded-3xl flex items-center justify-between group hover:border-[var(--color-accent)] transition-all cursor-pointer shadow-xs active:scale-[0.99]"
           >
             <div>
-              <p className="text-[var(--color-ink)]/60 text-xs font-bold uppercase tracking-wider mb-2">{stat.label}</p>
-              <p className="text-4xl font-black font-heading text-[var(--color-ink)]">{stat.value}</p>
+              <p className="text-[var(--color-ink)]/60 text-[11px] sm:text-xs font-bold uppercase tracking-wider mb-1 sm:mb-2">{stat.label}</p>
+              <p className="text-2xl sm:text-4xl font-black font-heading text-[var(--color-ink)]">{stat.value}</p>
             </div>
-            <div className={`p-4 bg-[var(--color-surface)] rounded-2xl ${stat.color} group-hover:bg-accent-gradient group-hover:text-[var(--color-on-accent)] transition-all shadow-xs`}>
-              <stat.icon size={28} />
+            <div className={`p-3 sm:p-4 bg-[var(--color-surface)] rounded-xl sm:rounded-2xl ${stat.color} group-hover:bg-accent-gradient group-hover:text-[var(--color-on-accent)] transition-all shadow-xs shrink-0`}>
+              <stat.icon size={22} className="sm:w-7 sm:h-7" />
             </div>
           </div>
         ))}
@@ -1430,8 +1462,8 @@ const LeadsManager = () => {
         </div>
       </div>
 
-      {/* Filters Bar */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-[var(--color-surface-muted)] p-4 rounded-2xl border border-[var(--color-border)]">
+      {/* Controls & Filters Bar */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4 bg-[var(--color-surface-muted)] p-3.5 sm:p-4 rounded-2xl border border-[var(--color-border)]">
         {/* Search */}
         <div className="relative w-full sm:w-80">
           <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-ink)]/40" />
@@ -1440,17 +1472,17 @@ const LeadsManager = () => {
             placeholder="Buscar por nome, empresa, email, whatsapp..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl pl-11 pr-4 py-2.5 text-sm outline-none focus:border-[var(--color-accent)] transition-all"
+            className="w-full bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl pl-11 pr-4 py-3 sm:py-2.5 text-sm outline-none focus:border-[var(--color-accent)] transition-all"
           />
         </div>
 
         {/* Status Filter */}
-        <div className="flex items-center gap-2 overflow-x-auto w-full sm:w-auto pb-2 sm:pb-0">
+        <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto scrollbar-none py-1 sm:py-0">
           {['todos', 'Novo', 'Em Atendimento', 'Concluído', 'Arquivado'].map((status) => (
             <button
               key={status}
               onClick={() => setStatusFilter(status)}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
                 statusFilter === status 
                   ? 'bg-[var(--color-accent)] text-[var(--color-on-accent)] shadow-xs' 
                   : 'bg-[var(--color-surface)] text-[var(--color-ink)]/60 hover:text-[var(--color-ink)] hover:bg-[var(--color-surface-hover)]'
@@ -1462,122 +1494,193 @@ const LeadsManager = () => {
         </div>
       </div>
 
-      {/* Leads Table */}
+      {/* Leads Content: Cards on Mobile (md:hidden), Table on Desktop (hidden md:block) */}
       {filteredLeads.length === 0 ? (
-        <div className="text-center py-16 bg-[var(--color-surface-muted)] rounded-3xl border border-[var(--color-border)]">
-          <Inbox size={48} className="mx-auto mb-4 text-[var(--color-ink)]/20" />
-          <h4 className="font-bold text-lg mb-1 font-heading">Nenhum lead encontrado</h4>
-          <p className="text-[var(--color-ink)]/50 text-sm">Nenhum formulário de contato atende aos critérios da busca.</p>
+        <div className="text-center py-12 sm:py-16 bg-[var(--color-surface-muted)] rounded-2xl sm:rounded-3xl border border-[var(--color-border)] p-6">
+          <Inbox size={40} className="mx-auto mb-3 text-[var(--color-ink)]/20" />
+          <h4 className="font-bold text-base sm:text-lg mb-1 font-heading">Nenhum lead encontrado</h4>
+          <p className="text-[var(--color-ink)]/50 text-xs sm:text-sm max-w-sm mx-auto">Nenhum formulário de contato atende aos critérios da busca.</p>
         </div>
       ) : (
-        <div className="bg-[var(--color-surface-muted)] border border-[var(--color-border)] rounded-3xl overflow-hidden shadow-xs">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-[var(--color-border)] bg-[var(--color-surface-muted)] text-[var(--color-ink)]/60 text-xs uppercase tracking-widest">
-                  <th className="p-6">Nome / Empresa</th>
-                  <th className="p-6">Segmento</th>
-                  <th className="p-6">Serviços Desejados</th>
-                  <th className="p-6">Data</th>
-                  <th className="p-6">Status</th>
-                  <th className="p-6 text-right">Ações</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[var(--color-border)]">
-                {filteredLeads.map((lead) => {
-                  const currentStatus = lead.status || 'Novo';
-                  const leadPhone = lead.whatsapp || lead.phone;
-                  return (
-                    <tr key={lead.id} className="hover:bg-[var(--color-surface-hover)] transition-colors">
-                      <td className="p-6">
-                        <div>
-                          <p className="font-bold text-sm text-[var(--color-ink)]">{lead.name}</p>
-                          <p className="text-xs text-[var(--color-ink)]/60">{lead.company}</p>
-                          {lead.email && <p className="text-[11px] text-[var(--color-ink)]/40 mt-0.5">{lead.email}</p>}
-                          {leadPhone && (
-                            <a
-                              href={getWhatsAppUrl(leadPhone)}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              onClick={(e) => e.stopPropagation()}
-                              className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-[#25D366] hover:text-[#1eb855] hover:underline mt-1 transition-colors"
-                              title="Conversar no WhatsApp"
-                            >
-                              <Phone size={12} className="shrink-0" />
-                              <span>{leadPhone}</span>
-                            </a>
-                          )}
-                        </div>
-                      </td>
-                      <td className="p-6">
-                        <span className="inline-block bg-[var(--color-surface)] border border-[var(--color-border)] px-3 py-1 rounded-lg text-xs font-semibold text-[var(--color-ink)]">
-                          {lead.segment || 'Não informado'}
-                        </span>
-                      </td>
-                      <td className="p-6">
-                        <div className="flex flex-wrap gap-1.5 max-w-xs">
-                          {lead.services && lead.services.length > 0 ? (
-                            lead.services.map((srv, idx) => (
-                              <span key={idx} className="bg-[var(--color-accent)]/20 text-[var(--color-ink)] border border-[var(--color-accent)]/40 text-[10px] font-bold px-2 py-0.5 rounded-md">
-                                {srv}
-                              </span>
-                            ))
-                          ) : (
-                            <span className="text-xs text-[var(--color-ink)]/40">-</span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="p-6 text-xs text-[var(--color-ink)]/60 whitespace-nowrap">
-                        {lead.createdAt?.toDate ? lead.createdAt.toDate().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Recente'}
-                      </td>
-                      <td className="p-6 whitespace-nowrap">
-                        <select
-                          value={currentStatus}
-                          onChange={(e) => handleUpdateStatus(lead.id, e.target.value as ProposalLead['status'])}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-bold outline-none border transition-all ${
-                            currentStatus === 'Novo' ? 'bg-amber-100 border-amber-300 text-amber-900' :
-                            currentStatus === 'Em Atendimento' ? 'bg-blue-100 border-blue-300 text-blue-900' :
-                            currentStatus === 'Concluído' ? 'bg-emerald-100 border-emerald-300 text-emerald-900' :
-                            'bg-gray-200 border-gray-300 text-gray-700'
-                          }`}
-                        >
-                          <option value="Novo">Novo</option>
-                          <option value="Em Atendimento">Em Atendimento</option>
-                          <option value="Concluído">Concluído</option>
-                          <option value="Arquivado">Arquivado</option>
-                        </select>
-                      </td>
-                      <td className="p-6 text-right whitespace-nowrap">
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            onClick={() => {
-                              setSelectedLead(lead);
-                              setIsDetailModalOpen(true);
-                            }}
-                            title="Ver Detalhes"
-                            className="p-2 text-[var(--color-ink)]/60 hover:text-[var(--color-ink)] hover:bg-[var(--color-surface)] rounded-xl transition-all"
-                          >
-                            <Eye size={18} />
-                          </button>
-                          <button
-                            onClick={() => {
-                              setLeadToDelete(lead.id);
-                              setIsConfirmOpen(true);
-                            }}
-                            title="Excluir Lead"
-                            className="p-2 text-[var(--color-ink)]/40 hover:text-[var(--color-error)] hover:bg-[var(--color-surface)] rounded-xl transition-all"
-                          >
-                            <Trash2 size={18} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+        <>
+          {/* Mobile Card List (<= 768px) */}
+          <div className="block md:hidden space-y-3.5">
+            {filteredLeads.map((lead) => {
+              const currentStatus = lead.status || 'Novo';
+              const leadPhone = lead.whatsapp || lead.phone;
+              return (
+                <div 
+                  key={lead.id} 
+                  onClick={() => {
+                    setSelectedLead(lead);
+                    setIsDetailModalOpen(true);
+                  }}
+                  className="bg-[var(--color-surface-muted)] border border-[var(--color-border)] rounded-2xl p-4 space-y-3 cursor-pointer hover:border-[var(--color-accent)]/50 transition-all shadow-xs active:scale-[0.99]"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <h4 className="font-bold text-base text-[var(--color-ink)] leading-snug">{lead.name || 'Sem nome'}</h4>
+                      <p className="text-xs font-semibold text-[var(--color-ink)]/60">{lead.company || 'Sem empresa'}</p>
+                    </div>
+                    <span className={`px-2.5 py-1 rounded-xl text-[10px] font-bold border shrink-0 ${
+                      currentStatus === 'Novo' ? 'bg-amber-100 border-amber-300 text-amber-900' :
+                      currentStatus === 'Em Atendimento' ? 'bg-blue-100 border-blue-300 text-blue-900' :
+                      currentStatus === 'Concluído' ? 'bg-emerald-100 border-emerald-300 text-emerald-900' :
+                      'bg-gray-200 border-gray-300 text-gray-700'
+                    }`}>
+                      {currentStatus}
+                    </span>
+                  </div>
+
+                  {lead.email && (
+                    <p className="text-xs text-[var(--color-ink)]/70 font-medium break-all">
+                      {lead.email}
+                    </p>
+                  )}
+
+                  {leadPhone && (
+                    <a
+                      href={getWhatsAppUrl(leadPhone)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="inline-flex items-center gap-1.5 text-xs font-bold text-[#25D366] hover:underline pt-0.5"
+                    >
+                      <Phone size={13} className="shrink-0" />
+                      <span>{leadPhone}</span>
+                    </a>
+                  )}
+
+                  <div className="flex items-center justify-between pt-2 border-t border-[var(--color-border)]/60 text-[11px] text-[var(--color-ink)]/50 font-medium">
+                    <span>
+                      {lead.createdAt?.toDate ? lead.createdAt.toDate().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }) + ' • ' + lead.createdAt.toDate().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : 'Recente'}
+                    </span>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedLead(lead);
+                        setIsDetailModalOpen(true);
+                      }}
+                      className="px-2.5 py-1 rounded-lg bg-[var(--color-surface)] border border-[var(--color-border)] text-xs font-bold text-[var(--color-ink)] hover:bg-[var(--color-accent)] hover:text-[var(--color-on-accent)] transition-all"
+                    >
+                      Ver Detalhes
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
           </div>
-        </div>
+
+          {/* Desktop Table (>= 769px) */}
+          <div className="hidden md:block bg-[var(--color-surface-muted)] border border-[var(--color-border)] rounded-3xl overflow-hidden shadow-xs">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-[var(--color-border)] bg-[var(--color-surface-muted)] text-[var(--color-ink)]/60 text-xs uppercase tracking-widest">
+                    <th className="p-6">Nome / Empresa</th>
+                    <th className="p-6">Segmento</th>
+                    <th className="p-6">Serviços Desejados</th>
+                    <th className="p-6">Data</th>
+                    <th className="p-6">Status</th>
+                    <th className="p-6 text-right">Ações</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[var(--color-border)]">
+                  {filteredLeads.map((lead) => {
+                    const currentStatus = lead.status || 'Novo';
+                    const leadPhone = lead.whatsapp || lead.phone;
+                    return (
+                      <tr key={lead.id} className="hover:bg-[var(--color-surface-hover)] transition-colors">
+                        <td className="p-6">
+                          <div>
+                            <p className="font-bold text-sm text-[var(--color-ink)]">{lead.name}</p>
+                            <p className="text-xs text-[var(--color-ink)]/60">{lead.company}</p>
+                            {lead.email && <p className="text-[11px] text-[var(--color-ink)]/40 mt-0.5">{lead.email}</p>}
+                            {leadPhone && (
+                              <a
+                                href={getWhatsAppUrl(leadPhone)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-[#25D366] hover:text-[#1eb855] hover:underline mt-1 transition-colors"
+                                title="Conversar no WhatsApp"
+                              >
+                                <Phone size={12} className="shrink-0" />
+                                <span>{leadPhone}</span>
+                              </a>
+                            )}
+                          </div>
+                        </td>
+                        <td className="p-6">
+                          <span className="inline-block bg-[var(--color-surface)] border border-[var(--color-border)] px-3 py-1 rounded-lg text-xs font-semibold text-[var(--color-ink)]">
+                            {lead.segment || 'Não informado'}
+                          </span>
+                        </td>
+                        <td className="p-6">
+                          <div className="flex flex-wrap gap-1.5 max-w-xs">
+                            {lead.services && lead.services.length > 0 ? (
+                              lead.services.map((srv, idx) => (
+                                <span key={idx} className="bg-[var(--color-accent)]/20 text-[var(--color-ink)] border border-[var(--color-accent)]/40 text-[10px] font-bold px-2 py-0.5 rounded-md">
+                                  {srv}
+                                </span>
+                              ))
+                            ) : (
+                              <span className="text-xs text-[var(--color-ink)]/40">-</span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="p-6 text-xs text-[var(--color-ink)]/60 whitespace-nowrap">
+                          {lead.createdAt?.toDate ? lead.createdAt.toDate().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Recente'}
+                        </td>
+                        <td className="p-6 whitespace-nowrap">
+                          <select
+                            value={currentStatus}
+                            onChange={(e) => handleUpdateStatus(lead.id, e.target.value as ProposalLead['status'])}
+                            className={`px-3 py-1.5 rounded-xl text-xs font-bold outline-none border transition-all ${
+                              currentStatus === 'Novo' ? 'bg-amber-100 border-amber-300 text-amber-900' :
+                              currentStatus === 'Em Atendimento' ? 'bg-blue-100 border-blue-300 text-blue-900' :
+                              currentStatus === 'Concluído' ? 'bg-emerald-100 border-emerald-300 text-emerald-900' :
+                              'bg-gray-200 border-gray-300 text-gray-700'
+                            }`}
+                          >
+                            <option value="Novo">Novo</option>
+                            <option value="Em Atendimento">Em Atendimento</option>
+                            <option value="Concluído">Concluído</option>
+                            <option value="Arquivado">Arquivado</option>
+                          </select>
+                        </td>
+                        <td className="p-6 text-right whitespace-nowrap">
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => {
+                                setSelectedLead(lead);
+                                setIsDetailModalOpen(true);
+                              }}
+                              title="Ver Detalhes"
+                              className="p-2 text-[var(--color-ink)]/60 hover:text-[var(--color-ink)] hover:bg-[var(--color-surface)] rounded-xl transition-all"
+                            >
+                              <Eye size={18} />
+                            </button>
+                            <button
+                              onClick={() => {
+                                setLeadToDelete(lead.id);
+                                setIsConfirmOpen(true);
+                              }}
+                              title="Excluir Lead"
+                              className="p-2 text-[var(--color-ink)]/40 hover:text-[var(--color-error)] hover:bg-[var(--color-surface)] rounded-xl transition-all"
+                            >
+                              <Trash2 size={18} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
       )}
 
       {/* Detail Modal */}
@@ -1587,59 +1690,86 @@ const LeadsManager = () => {
         title="Detalhes do Lead"
       >
         {selectedLead && (
-          <div className="space-y-6">
-            <div className="grid grid-cols-2 gap-4 bg-[var(--color-surface-muted)] p-6 rounded-2xl border border-[var(--color-border)]">
+          <div className="space-y-5 text-sm font-sans">
+            {/* Status Change selector */}
+            <div className="bg-[var(--color-surface-muted)] p-3.5 sm:p-4 rounded-2xl border border-[var(--color-border)] space-y-1.5">
+              <label className="text-[10px] font-bold text-[var(--color-ink)]/50 uppercase tracking-wider block">Alterar Status</label>
+              <select
+                value={selectedLead.status || 'Novo'}
+                onChange={(e) => {
+                  const newStatus = e.target.value as ProposalLead['status'];
+                  setSelectedLead({ ...selectedLead, status: newStatus });
+                  handleUpdateStatus(selectedLead.id, newStatus);
+                }}
+                className="w-full px-4 py-3 rounded-xl text-sm font-bold outline-none border bg-[var(--color-surface)] border-[var(--color-border)] text-[var(--color-ink)] cursor-pointer"
+              >
+                <option value="Novo">Novo</option>
+                <option value="Em Atendimento">Em Atendimento</option>
+                <option value="Concluído">Concluído</option>
+                <option value="Arquivado">Arquivado</option>
+              </select>
+            </div>
+
+            {/* Reorganized Vertical Info Fields */}
+            <div className="flex flex-col gap-4 bg-[var(--color-surface-muted)] p-4 sm:p-6 rounded-2xl border border-[var(--color-border)]">
               <div>
-                <p className="text-[10px] font-bold text-[var(--color-ink)]/40 uppercase tracking-widest">Nome</p>
-                <p className="font-bold text-lg text-[var(--color-ink)]">{selectedLead.name}</p>
+                <p className="text-[10px] font-bold text-[var(--color-ink)]/40 uppercase tracking-widest">NOME</p>
+                <p className="font-bold text-base sm:text-lg text-[var(--color-ink)]">{selectedLead.name}</p>
               </div>
-              <div>
-                <p className="text-[10px] font-bold text-[var(--color-ink)]/40 uppercase tracking-widest">Empresa</p>
-                <p className="font-bold text-lg text-[var(--color-ink)]">{selectedLead.company}</p>
-              </div>
+
               {selectedLead.email && (
                 <div>
-                  <p className="text-[10px] font-bold text-[var(--color-ink)]/40 uppercase tracking-widest">E-mail</p>
-                  <p className="text-sm font-semibold text-[var(--color-ink)]">{selectedLead.email}</p>
+                  <p className="text-[10px] font-bold text-[var(--color-ink)]/40 uppercase tracking-widest">E-MAIL</p>
+                  <p className="text-sm font-semibold text-[var(--color-ink)] break-all">{selectedLead.email}</p>
                 </div>
               )}
-              {(selectedLead.whatsapp || selectedLead.phone) && (
-                <div>
-                  <p className="text-[10px] font-bold text-[var(--color-ink)]/40 uppercase tracking-widest">Telefone / WhatsApp</p>
-                  <p className="text-sm font-semibold text-[var(--color-ink)] mb-1.5">{selectedLead.whatsapp || selectedLead.phone}</p>
-                  <a
-                    href={getWhatsAppUrl(selectedLead.whatsapp || selectedLead.phone)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#25D366] hover:bg-[#1eb855] text-white font-bold text-xs transition-all shadow-xs"
-                  >
-                    <Phone size={13} />
-                    <span>FALAR NO WHATSAPP</span>
-                  </a>
-                </div>
-              )}
+
               <div>
-                <p className="text-[10px] font-bold text-[var(--color-ink)]/40 uppercase tracking-widest">Segmento</p>
+                <p className="text-[10px] font-bold text-[var(--color-ink)]/40 uppercase tracking-widest">SEGMENTO</p>
                 <p className="text-sm font-semibold text-[var(--color-ink)]">{selectedLead.segment || 'Não informado'}</p>
               </div>
+
               <div>
-                <p className="text-[10px] font-bold text-[var(--color-ink)]/40 uppercase tracking-widest">Origem / Página</p>
-                <p className="text-sm font-semibold text-[var(--color-ink)]">{selectedLead.source || '/'}</p>
-              </div>
-              <div>
-                <p className="text-[10px] font-bold text-[var(--color-ink)]/40 uppercase tracking-widest">Data de Recebimento</p>
+                <p className="text-[10px] font-bold text-[var(--color-ink)]/40 uppercase tracking-widest">DATA DE RECEBIMENTO</p>
                 <p className="text-sm font-semibold text-[var(--color-ink)]">
                   {selectedLead.createdAt?.toDate ? selectedLead.createdAt.toDate().toLocaleString('pt-BR') : 'Recente'}
                 </p>
               </div>
+
+              <div>
+                <p className="text-[10px] font-bold text-[var(--color-ink)]/40 uppercase tracking-widest">EMPRESA</p>
+                <p className="font-bold text-base text-[var(--color-ink)]">{selectedLead.company}</p>
+              </div>
+
+              {(selectedLead.whatsapp || selectedLead.phone) && (
+                <div>
+                  <p className="text-[10px] font-bold text-[var(--color-ink)]/40 uppercase tracking-widest">TELEFONE / WHATSAPP</p>
+                  <p className="text-base font-bold text-[var(--color-ink)] mb-2">{selectedLead.whatsapp || selectedLead.phone}</p>
+                  <a
+                    href={getWhatsAppUrl(selectedLead.whatsapp || selectedLead.phone)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full inline-flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl bg-[#25D366] hover:bg-[#1eb855] text-white font-extrabold text-sm transition-all shadow-md active:scale-[0.98]"
+                  >
+                    <Phone size={18} />
+                    <span>FALAR NO WHATSAPP</span>
+                  </a>
+                </div>
+              )}
+
+              <div>
+                <p className="text-[10px] font-bold text-[var(--color-ink)]/40 uppercase tracking-widest">ORIGEM / PÁGINA</p>
+                <p className="text-sm font-semibold text-[var(--color-ink)]">{selectedLead.source || '/'}</p>
+              </div>
             </div>
 
+            {/* Serviços de Interesse */}
             <div>
-              <p className="text-[10px] font-bold text-[var(--color-ink)]/40 uppercase tracking-widest mb-2">Serviços de Interesse</p>
+              <p className="text-[10px] font-bold text-[var(--color-ink)]/40 uppercase tracking-widest mb-2">SERVIÇOS DE INTERESSE</p>
               <div className="flex flex-wrap gap-2">
                 {selectedLead.services && selectedLead.services.length > 0 ? (
                   selectedLead.services.map((srv, idx) => (
-                    <span key={idx} className="bg-[var(--color-accent)] text-[var(--color-on-accent)] text-xs font-bold px-3 py-1.5 rounded-xl shadow-xs">
+                    <span key={idx} className="bg-[#FFC400]/15 text-[#43210D] border border-[#FFC400]/40 font-bold px-3 py-2 rounded-xl text-xs break-words max-w-full">
                       {srv}
                     </span>
                   ))
@@ -1649,38 +1779,22 @@ const LeadsManager = () => {
               </div>
             </div>
 
+            {/* Mensagem / Resumo do Projeto */}
             <div>
-              <p className="text-[10px] font-bold text-[var(--color-ink)]/40 uppercase tracking-widest mb-2">Mensagem / Resumo do Projeto</p>
-              <div className="bg-[var(--color-surface-muted)] border border-[var(--color-border)] p-4 rounded-2xl text-sm whitespace-pre-wrap leading-relaxed text-[var(--color-ink)]">
+              <p className="text-[10px] font-bold text-[var(--color-ink)]/40 uppercase tracking-widest mb-2">MENSAGEM / RESUMO DO PROJETO</p>
+              <div className="bg-[var(--color-surface-muted)] border border-[var(--color-border)] p-4 rounded-2xl text-sm whitespace-pre-wrap break-words leading-relaxed text-[var(--color-ink)]">
                 {selectedLead.message || 'Sem mensagem adicional.'}
               </div>
             </div>
 
-            <div className="flex items-center justify-between pt-4 border-t border-[var(--color-border)]">
-              <div className="flex items-center gap-3">
-                <span className="text-xs font-bold text-[var(--color-ink)]/60">Alterar Status:</span>
-                <select
-                  value={selectedLead.status || 'Novo'}
-                  onChange={(e) => {
-                    const newStatus = e.target.value as ProposalLead['status'];
-                    setSelectedLead({ ...selectedLead, status: newStatus });
-                    handleUpdateStatus(selectedLead.id, newStatus);
-                  }}
-                  className="px-4 py-2 rounded-xl text-xs font-bold outline-none border bg-[var(--color-surface)] border-[var(--color-border)] text-[var(--color-ink)]"
-                >
-                  <option value="Novo">Novo</option>
-                  <option value="Em Atendimento">Em Atendimento</option>
-                  <option value="Concluído">Concluído</option>
-                  <option value="Arquivado">Arquivado</option>
-                </select>
-              </div>
-
+            {/* Action Bar */}
+            <div className="pt-3 border-t border-[var(--color-border)] flex items-center justify-end">
               <button
                 onClick={() => {
                   setLeadToDelete(selectedLead.id);
                   setIsConfirmOpen(true);
                 }}
-                className="text-[var(--color-error)] hover:bg-[var(--color-error)]/10 px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all"
+                className="text-[var(--color-error)] hover:bg-[var(--color-error)]/10 px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer"
               >
                 <Trash2 size={16} /> Excluir Lead
               </button>
@@ -1849,13 +1963,13 @@ const BrandsManager = () => {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between flex-wrap gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h3 className="text-2xl font-bold">Gerenciar Marcas</h3>
-          <p className="text-sm text-[var(--color-ink)]/60">Controle as marcas parceiras exibidas no carrossel do site público.</p>
+          <h3 className="text-xl sm:text-2xl font-bold font-heading">Gerenciar Marcas</h3>
+          <p className="text-xs sm:text-sm text-[var(--color-ink)]/60">Controle as marcas parceiras exibidas no carrossel do site público.</p>
         </div>
-        <div className="flex items-center gap-4">
-          <div className="relative">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3">
+          <div className="relative w-full sm:w-auto">
             <input 
               type="file"
               multiple
@@ -1866,9 +1980,9 @@ const BrandsManager = () => {
             />
             <label 
               htmlFor="bulk-brand-upload"
-              className="bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-ink)] px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-[var(--color-surface-hover)] transition-all cursor-pointer text-sm"
+              className="w-full sm:w-auto bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-ink)] px-4 py-3 sm:py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-[var(--color-surface-hover)] transition-all cursor-pointer text-xs sm:text-sm"
             >
-              <Upload size={18} /> Upload em Massa
+              <Upload size={16} /> Upload em Massa
             </label>
           </div>
           <button 
@@ -1876,9 +1990,9 @@ const BrandsManager = () => {
               setCurrentBrand({ name: '', logoUrl: '', url: '', status: 'Ativa', order: brands.length + 1 });
               setIsModalOpen(true);
             }}
-            className="bg-accent-gradient text-[var(--color-on-accent)] px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:scale-105 transition-all text-sm"
+            className="w-full sm:w-auto bg-accent-gradient text-[var(--color-on-accent)] px-4 py-3 sm:py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 hover:scale-105 transition-all text-xs sm:text-sm shadow-sm cursor-pointer"
           >
-            <Plus size={18} /> Adicionar Marca
+            <Plus size={16} /> Adicionar Marca
           </button>
         </div>
       </div>
@@ -2206,50 +2320,55 @@ const ServicesManager = () => {
   if (loading) return <div className="flex justify-center py-20"><Loader2 className="animate-spin text-[var(--color-accent)]" size={48} /></div>;
 
   return (
-    <div className="space-y-8">
-      <div className="flex items-center justify-between">
-        <h3 className="text-2xl font-bold">Gerenciar Serviços</h3>
+    <div className="space-y-6 sm:space-y-8">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h3 className="text-xl sm:text-2xl font-bold font-heading">Gerenciar Serviços</h3>
+          <p className="text-xs sm:text-sm text-[var(--color-ink)]/60">Configure as soluções oferecidas exibidas nas páginas do site.</p>
+        </div>
         <button 
           onClick={() => {
             setCurrentService({ title: '', description: '', iconName: 'Zap', order: services.length });
             setIsModalOpen(true);
           }}
-          className="bg-accent-gradient text-[var(--color-on-accent)] px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:scale-105 transition-all"
+          className="w-full sm:w-auto bg-accent-gradient text-[var(--color-on-accent)] px-5 py-3 sm:py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:scale-105 transition-all text-xs sm:text-sm shadow-sm cursor-pointer"
         >
-          <Plus size={20} /> Novo Serviço
+          <Plus size={18} /> Novo Serviço
         </button>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-3 sm:space-y-4">
         {services.map((service) => (
-          <div key={service.id} className="bg-[var(--color-surface-muted)] border border-[var(--color-border)] p-6 rounded-3xl flex items-center justify-between group">
-            <div className="flex items-center gap-6">
-              <div className="w-12 h-12 bg-accent-gradient rounded-xl flex items-center justify-center text-[var(--color-on-accent)]">
+          <div key={service.id} className="bg-[var(--color-surface-muted)] border border-[var(--color-border)] p-4 sm:p-6 rounded-2xl sm:rounded-3xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 group shadow-xs">
+            <div className="flex items-start sm:items-center gap-3.5 sm:gap-6">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-accent-gradient rounded-xl flex items-center justify-center text-[var(--color-on-accent)] shrink-0 shadow-xs">
                 {getIcon(service.iconName)}
               </div>
-              <div>
-                <h4 className="font-bold">{service.title}</h4>
-                <p className="text-[var(--color-ink)]/40 text-sm">{service.description.substring(0, 100)}...</p>
+              <div className="min-w-0 flex-1">
+                <h4 className="font-bold text-sm sm:text-base text-[var(--color-ink)]">{service.title}</h4>
+                <p className="text-[var(--color-ink)]/60 text-xs sm:text-sm line-clamp-2 mt-0.5">{service.description}</p>
               </div>
             </div>
-            <div className="flex gap-2">
+            <div className="flex items-center justify-end gap-2 border-t sm:border-t-0 pt-3 sm:pt-0 border-[var(--color-border)]/60">
               <button 
                 onClick={() => {
                   setCurrentService(service);
                   setIsModalOpen(true);
                 }}
-                className="p-3 bg-[var(--color-surface-hover)] rounded-xl hover:bg-[var(--color-accent)] hover:text-[var(--color-on-accent)] transition-all"
+                className="p-2.5 sm:p-3 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl hover:bg-[var(--color-accent)] hover:text-[var(--color-on-accent)] transition-all cursor-pointer"
+                title="Editar Serviço"
               >
-                <Edit2 size={20} />
+                <Edit2 size={16} className="sm:w-5 sm:h-5" />
               </button>
               <button 
                 onClick={() => {
                   setServiceToDelete(service.id);
                   setIsConfirmOpen(true);
                 }}
-                className="p-3 bg-[var(--color-surface-hover)] rounded-xl hover:bg-[var(--color-error)] hover:text-[var(--color-on-error)] transition-all"
+                className="p-2.5 sm:p-3 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl hover:bg-[var(--color-error)] hover:text-[var(--color-on-error)] transition-all cursor-pointer"
+                title="Excluir Serviço"
               >
-                <Trash2 size={20} />
+                <Trash2 size={16} className="sm:w-5 sm:h-5" />
               </button>
             </div>
           </div>
@@ -2546,30 +2665,30 @@ const ProjectsManager = () => {
   return (
     <div className="space-y-8">
       {/* Header Bar */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 bg-[var(--color-surface-muted)] border border-[var(--color-border)] p-6 rounded-3xl">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4 bg-[var(--color-surface-muted)] border border-[var(--color-border)] p-4 sm:p-6 rounded-2xl sm:rounded-3xl">
         <div>
-          <h3 className="text-2xl font-bold">Gerenciar Projetos / Cases</h3>
+          <h3 className="text-xl sm:text-2xl font-bold font-heading">Gerenciar Projetos / Cases</h3>
           <p className="text-xs text-[var(--color-ink)]/60 mt-1">
             Projetos publicados aqui alimentam a página pública <code className="font-mono text-[var(--color-accent)]">/cases</code> e a seção Destaque da Home.
           </p>
         </div>
         <button 
           onClick={handleOpenNew}
-          className="bg-accent-gradient text-[var(--color-on-accent)] px-6 py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:scale-105 transition-all text-sm shadow-md shrink-0 cursor-pointer"
+          className="w-full sm:w-auto bg-accent-gradient text-[var(--color-on-accent)] px-5 py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:scale-105 transition-all text-xs sm:text-sm shadow-md shrink-0 cursor-pointer"
         >
           <Plus size={18} /> Novo Projeto
         </button>
       </div>
 
       {/* Toolbar Filters */}
-      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4">
         {/* Status Tabs */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-0.5">
           {(['Todos', 'Publicado', 'Rascunho'] as const).map(tab => (
             <button
               key={tab}
               onClick={() => setStatusFilter(tab)}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border ${
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all border whitespace-nowrap cursor-pointer ${
                 statusFilter === tab
                   ? 'bg-[var(--color-accent)] text-[var(--color-bg)] border-[var(--color-accent)] shadow-sm'
                   : 'bg-[var(--color-surface-muted)] text-[var(--color-ink)]/70 border-[var(--color-border)] hover:bg-[var(--color-surface-hover)]'
@@ -2581,23 +2700,23 @@ const ProjectsManager = () => {
         </div>
 
         {/* Search */}
-        <div className="relative min-w-[240px]">
+        <div className="relative w-full sm:w-72">
           <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-ink)]/40" />
           <input
             type="text"
             placeholder="Buscar por cliente, título ou categoria..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-[var(--color-surface-muted)] border border-[var(--color-border)] rounded-xl pl-9 pr-4 py-2 text-xs focus:border-[var(--color-accent)] outline-none"
+            className="w-full bg-[var(--color-surface-muted)] border border-[var(--color-border)] rounded-xl pl-9 pr-4 py-2.5 text-xs focus:border-[var(--color-accent)] outline-none"
           />
         </div>
       </div>
 
       {/* Table / Cards List */}
       {filteredProjects.length === 0 ? (
-        <div className="bg-[var(--color-surface-muted)] border border-[var(--color-border)] p-12 rounded-3xl text-center">
-          <FolderKanban className="mx-auto text-[var(--color-ink)]/30 mb-3" size={48} />
-          <h4 className="text-lg font-bold mb-1">Nenhum projeto encontrado</h4>
+        <div className="bg-[var(--color-surface-muted)] border border-[var(--color-border)] p-8 sm:p-12 rounded-2xl sm:rounded-3xl text-center">
+          <FolderKanban className="mx-auto text-[var(--color-ink)]/30 mb-3" size={40} />
+          <h4 className="text-base sm:text-lg font-bold mb-1">Nenhum projeto encontrado</h4>
           <p className="text-xs text-[var(--color-ink)]/60 max-w-md mx-auto mb-4">
             {searchQuery || statusFilter !== 'Todos'
               ? 'Tente mudar os filtros de pesquisa.'
@@ -2605,129 +2724,220 @@ const ProjectsManager = () => {
           </p>
         </div>
       ) : (
-        <div className="bg-[var(--color-surface-muted)] border border-[var(--color-border)] rounded-3xl overflow-hidden shadow-sm">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-[700px]">
-              <thead>
-                <tr className="border-b border-[var(--color-border)] text-[11px] font-extrabold uppercase text-[var(--color-ink)]/50 tracking-wider bg-[var(--color-surface)]">
-                  <th className="p-4 pl-6">Capa</th>
-                  <th className="p-4">Cliente / Projeto</th>
-                  <th className="p-4">Categoria / Segmento</th>
-                  <th className="p-4 text-center">Status</th>
-                  <th className="p-4 text-center">Destaque Home</th>
-                  <th className="p-4 text-center">Ordem</th>
-                  <th className="p-4 pr-6 text-right">Ações</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[var(--color-border)] text-xs font-medium">
-                {filteredProjects.map((p) => {
-                  const isPublished = p.status === 'Publicado' || p.status === undefined;
-                  const isHighlight = p.highlightHome === true || p.highlightHome === 'Sim';
-                  const slug = p.slug || p.id;
+        <>
+          {/* Mobile Card List (<= 768px) */}
+          <div className="block md:hidden space-y-3.5">
+            {filteredProjects.map((p) => {
+              const isPublished = p.status === 'Publicado' || p.status === undefined;
+              const isHighlight = p.highlightHome === true || p.highlightHome === 'Sim';
+              const slug = p.slug || p.id;
 
-                  return (
-                    <tr key={p.id} className="hover:bg-[var(--color-surface-hover)]/50 transition-colors">
-                      {/* Image Thumbnail */}
-                      <td className="p-4 pl-6">
-                        <div className="w-16 h-10 rounded-lg overflow-hidden bg-[var(--color-surface)] border border-[var(--color-border)] shrink-0">
-                          {p.imageUrl ? (
-                            <img src={p.imageUrl} alt={p.title} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-[10px] text-[var(--color-ink)]/40 font-bold">
-                              Sem Capa
-                            </div>
-                          )}
+              return (
+                <div 
+                  key={p.id}
+                  className="bg-[var(--color-surface-muted)] border border-[var(--color-border)] rounded-2xl p-4 space-y-3 shadow-xs"
+                >
+                  <div className="flex gap-3 items-start">
+                    <div className="w-20 h-14 rounded-xl overflow-hidden bg-[var(--color-surface)] border border-[var(--color-border)] shrink-0">
+                      {p.imageUrl ? (
+                        <img src={p.imageUrl} alt={p.title} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-[10px] text-[var(--color-ink)]/40 font-bold text-center px-1">
+                          Sem Capa
                         </div>
-                      </td>
+                      )}
+                    </div>
 
-                      {/* Client / Title */}
-                      <td className="p-4 max-w-xs">
-                        <p className="font-extrabold text-[var(--color-accent)] text-[11px] uppercase tracking-wider">{p.client || 'Cliente não especificado'}</p>
-                        <h4 className="font-bold text-sm text-[var(--color-ink)] truncate">{p.title}</h4>
-                        <p className="text-[10px] text-[var(--color-ink)]/40 font-mono">/cases/{slug}</p>
-                      </td>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-extrabold text-[var(--color-accent)] text-[10px] uppercase tracking-wider truncate">{p.client || 'Cliente não especificado'}</p>
+                      <h4 className="font-bold text-sm text-[var(--color-ink)] leading-snug line-clamp-2">{p.title}</h4>
+                      <p className="text-[10px] text-[var(--color-ink)]/50 font-mono mt-0.5 truncate">/cases/{slug}</p>
+                    </div>
+                  </div>
 
-                      {/* Category / Segment */}
-                      <td className="p-4">
-                        <span className="inline-block font-extrabold text-[10px] px-2.5 py-1 rounded-md bg-[var(--color-surface)] border border-[var(--color-border)] uppercase">
-                          {p.category || 'Geral'}
+                  <div className="flex items-center justify-between gap-2 pt-1 border-t border-[var(--color-border)]/60 text-xs">
+                    <span className="font-extrabold text-[10px] px-2.5 py-1 rounded-md bg-[var(--color-surface)] border border-[var(--color-border)] uppercase">
+                      {p.category || 'Geral'}
+                    </span>
+
+                    <div className="flex items-center gap-1.5">
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase border ${
+                        isPublished ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30' : 'bg-amber-500/10 text-amber-600 border-amber-500/30'
+                      }`}>
+                        {isPublished ? 'Publicado' : 'Rascunho'}
+                      </span>
+                      {isHighlight && (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-[var(--color-accent)]/15 text-[var(--color-accent)] border border-[var(--color-accent)]/30">
+                          Destaque
                         </span>
-                        {p.segment && (
-                          <p className="text-[10px] text-[var(--color-ink)]/60 mt-1">{p.segment}</p>
-                        )}
-                      </td>
+                      )}
+                    </div>
+                  </div>
 
-                      {/* Status Badge */}
-                      <td className="p-4 text-center">
-                        <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-extrabold uppercase border ${
-                          isPublished
-                            ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30'
-                            : 'bg-amber-500/10 text-amber-600 border-amber-500/30'
-                        }`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${isPublished ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
-                          {isPublished ? 'Publicado' : 'Rascunho'}
-                        </span>
-                      </td>
-
-                      {/* Destaque Badge */}
-                      <td className="p-4 text-center">
-                        <span className={`inline-block px-3 py-1 rounded-full text-[10px] font-extrabold uppercase border ${
-                          isHighlight
-                            ? 'bg-[var(--color-accent)]/15 text-[var(--color-accent)] border-[var(--color-accent)]/30'
-                            : 'bg-[var(--color-surface)] text-[var(--color-ink)]/40 border-[var(--color-border)]'
-                        }`}>
-                          {isHighlight ? 'Sim' : 'Não'}
-                        </span>
-                      </td>
-
-                      {/* Order */}
-                      <td className="p-4 text-center font-bold text-[var(--color-ink)]/70">
-                        {p.order || 1}
-                      </td>
-
-                      {/* Actions */}
-                      <td className="p-4 pr-6 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <button
-                            onClick={() => window.open(`/cases/${slug}`, '_blank')}
-                            className="p-2 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg hover:bg-[var(--color-surface-hover)] transition-all text-[var(--color-ink)]/70"
-                            title="Visualizar Case no Site"
-                          >
-                            <ExternalLink size={15} />
-                          </button>
-                          <button
-                            onClick={() => handleDuplicate(p)}
-                            className="p-2 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg hover:bg-[var(--color-accent)] hover:text-[var(--color-bg)] transition-all text-[var(--color-ink)]/70"
-                            title="Duplicar como Rascunho"
-                          >
-                            <Copy size={15} />
-                          </button>
-                          <button
-                            onClick={() => handleOpenEdit(p)}
-                            className="p-2 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg hover:bg-[var(--color-accent)] hover:text-[var(--color-bg)] transition-all text-[var(--color-ink)]/70"
-                            title="Editar Projeto"
-                          >
-                            <Edit2 size={15} />
-                          </button>
-                          <button
-                            onClick={() => {
-                              setProjectToDelete(p.id);
-                              setIsConfirmOpen(true);
-                            }}
-                            className="p-2 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg hover:bg-[var(--color-error)] hover:text-white transition-all text-[var(--color-ink)]/70"
-                            title="Excluir Projeto"
-                          >
-                            <Trash2 size={15} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                  {/* Actions */}
+                  <div className="flex items-center justify-end gap-2 pt-2 border-t border-[var(--color-border)]/60">
+                    <button
+                      onClick={() => window.open(`/cases/${slug}`, '_blank')}
+                      className="p-2 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl transition-all text-[var(--color-ink)]/70"
+                      title="Visualizar Case no Site"
+                    >
+                      <ExternalLink size={16} />
+                    </button>
+                    <button
+                      onClick={() => handleDuplicate(p)}
+                      className="p-2 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl transition-all text-[var(--color-ink)]/70"
+                      title="Duplicar como Rascunho"
+                    >
+                      <Copy size={16} />
+                    </button>
+                    <button
+                      onClick={() => handleOpenEdit(p)}
+                      className="px-3 py-1.5 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl font-bold text-xs flex items-center gap-1.5 text-[var(--color-ink)]"
+                      title="Editar Projeto"
+                    >
+                      <Edit2 size={14} /> Editar
+                    </button>
+                    <button
+                      onClick={() => {
+                        setProjectToDelete(p.id);
+                        setIsConfirmOpen(true);
+                      }}
+                      className="p-2 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl text-[var(--color-error)]"
+                      title="Excluir Projeto"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
           </div>
-        </div>
+
+          {/* Desktop Table (>= 769px) */}
+          <div className="hidden md:block bg-[var(--color-surface-muted)] border border-[var(--color-border)] rounded-3xl overflow-hidden shadow-sm">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse min-w-[700px]">
+                <thead>
+                  <tr className="border-b border-[var(--color-border)] text-[11px] font-extrabold uppercase text-[var(--color-ink)]/50 tracking-wider bg-[var(--color-surface)]">
+                    <th className="p-4 pl-6">Capa</th>
+                    <th className="p-4">Cliente / Projeto</th>
+                    <th className="p-4">Categoria / Segmento</th>
+                    <th className="p-4 text-center">Status</th>
+                    <th className="p-4 text-center">Destaque Home</th>
+                    <th className="p-4 text-center">Ordem</th>
+                    <th className="p-4 pr-6 text-right">Ações</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[var(--color-border)] text-xs font-medium">
+                  {filteredProjects.map((p) => {
+                    const isPublished = p.status === 'Publicado' || p.status === undefined;
+                    const isHighlight = p.highlightHome === true || p.highlightHome === 'Sim';
+                    const slug = p.slug || p.id;
+
+                    return (
+                      <tr key={p.id} className="hover:bg-[var(--color-surface-hover)]/50 transition-colors">
+                        {/* Image Thumbnail */}
+                        <td className="p-4 pl-6">
+                          <div className="w-16 h-10 rounded-lg overflow-hidden bg-[var(--color-surface)] border border-[var(--color-border)] shrink-0">
+                            {p.imageUrl ? (
+                              <img src={p.imageUrl} alt={p.title} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-[10px] text-[var(--color-ink)]/40 font-bold">
+                                Sem Capa
+                              </div>
+                            )}
+                          </div>
+                        </td>
+
+                        {/* Client / Title */}
+                        <td className="p-4 max-w-xs">
+                          <p className="font-extrabold text-[var(--color-accent)] text-[11px] uppercase tracking-wider">{p.client || 'Cliente não especificado'}</p>
+                          <h4 className="font-bold text-sm text-[var(--color-ink)] truncate">{p.title}</h4>
+                          <p className="text-[10px] text-[var(--color-ink)]/40 font-mono">/cases/{slug}</p>
+                        </td>
+
+                        {/* Category / Segment */}
+                        <td className="p-4">
+                          <span className="inline-block font-extrabold text-[10px] px-2.5 py-1 rounded-md bg-[var(--color-surface)] border border-[var(--color-border)] uppercase">
+                            {p.category || 'Geral'}
+                          </span>
+                          {p.segment && (
+                            <p className="text-[10px] text-[var(--color-ink)]/60 mt-1">{p.segment}</p>
+                          )}
+                        </td>
+
+                        {/* Status Badge */}
+                        <td className="p-4 text-center">
+                          <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-extrabold uppercase border ${
+                            isPublished
+                              ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30'
+                              : 'bg-amber-500/10 text-amber-600 border-amber-500/30'
+                          }`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${isPublished ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
+                            {isPublished ? 'Publicado' : 'Rascunho'}
+                          </span>
+                        </td>
+
+                        {/* Destaque Badge */}
+                        <td className="p-4 text-center">
+                          <span className={`inline-block px-3 py-1 rounded-full text-[10px] font-extrabold uppercase border ${
+                            isHighlight
+                              ? 'bg-[var(--color-accent)]/15 text-[var(--color-accent)] border-[var(--color-accent)]/30'
+                              : 'bg-[var(--color-surface)] text-[var(--color-ink)]/40 border-[var(--color-border)]'
+                          }`}>
+                            {isHighlight ? 'Sim' : 'Não'}
+                          </span>
+                        </td>
+
+                        {/* Order */}
+                        <td className="p-4 text-center font-bold text-[var(--color-ink)]/70">
+                          {p.order || 1}
+                        </td>
+
+                        {/* Actions */}
+                        <td className="p-4 pr-6 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              onClick={() => window.open(`/cases/${slug}`, '_blank')}
+                              className="p-2 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg hover:bg-[var(--color-surface-hover)] transition-all text-[var(--color-ink)]/70"
+                              title="Visualizar Case no Site"
+                            >
+                              <ExternalLink size={15} />
+                            </button>
+                            <button
+                              onClick={() => handleDuplicate(p)}
+                              className="p-2 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg hover:bg-[var(--color-accent)] hover:text-[var(--color-bg)] transition-all text-[var(--color-ink)]/70"
+                              title="Duplicar como Rascunho"
+                            >
+                              <Copy size={15} />
+                            </button>
+                            <button
+                              onClick={() => handleOpenEdit(p)}
+                              className="p-2 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg hover:bg-[var(--color-accent)] hover:text-[var(--color-bg)] transition-all text-[var(--color-ink)]/70"
+                              title="Editar Projeto"
+                            >
+                              <Edit2 size={15} />
+                            </button>
+                            <button
+                              onClick={() => {
+                                setProjectToDelete(p.id);
+                                setIsConfirmOpen(true);
+                              }}
+                              className="p-2 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg hover:bg-[var(--color-error)] hover:text-white transition-all text-[var(--color-ink)]/70"
+                              title="Excluir Projeto"
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
       )}
 
       {/* Edit / Create Modal Form */}
@@ -4430,23 +4640,136 @@ const UsersManager = ({ currentUser }: { currentUser: AdminUser }) => {
   if (loading) return <div className="flex justify-center py-20"><Loader2 className="animate-spin text-[var(--color-accent)]" size={48} /></div>;
 
   return (
-    <div className="space-y-8 font-sans">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6 sm:space-y-8 font-sans">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4">
         <div>
-          <h3 className="text-2xl font-bold font-heading">Gerenciar Usuários</h3>
+          <h3 className="text-xl sm:text-2xl font-bold font-heading">Gerenciar Usuários</h3>
           <p className="text-xs text-[var(--color-ink)]/50 mt-1">
             Cadastre novos administradores e controle acessos à plataforma.
           </p>
         </div>
         <button 
           onClick={() => setIsAddModalOpen(true)}
-          className="bg-[#FFC400] text-[#43210D] hover:bg-[#E17541] hover:text-white px-6 py-3 rounded-xl font-extrabold flex items-center gap-2 hover:scale-105 transition-all shadow-md text-xs uppercase font-heading cursor-pointer"
+          className="w-full sm:w-auto bg-[#FFC400] text-[#43210D] hover:bg-[#E17541] hover:text-white px-5 py-3 rounded-xl font-extrabold flex items-center justify-center gap-2 hover:scale-105 transition-all shadow-md text-xs uppercase font-heading cursor-pointer"
         >
-          <Plus size={20} /> Novo Usuário
+          <Plus size={18} /> Novo Usuário
         </button>
       </div>
 
-      <div className="bg-white border border-[var(--color-border)] rounded-3xl overflow-hidden shadow-xs">
+      {/* Mobile Users Cards (<= 768px) */}
+      <div className="block md:hidden space-y-3.5">
+        {users.map(u => {
+          const status = u.accessStatus || 'Ativo';
+          return (
+            <div key={u.id} className="bg-white border border-[var(--color-border)] rounded-2xl p-4 space-y-3 shadow-xs">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  {u.photoURL ? (
+                    <img src={u.photoURL} alt={u.displayName} className="w-10 h-10 rounded-full object-cover border border-[#CE892C]/30 shrink-0" />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-[#FFC400] text-[#43210D] flex items-center justify-center font-black text-xs shrink-0 shadow-xs">
+                      {u.displayName?.[0] || u.email?.[0].toUpperCase()}
+                    </div>
+                  )}
+                  <div className="min-w-0">
+                    <span className="font-bold block text-sm text-[#43210D] truncate">{u.displayName || 'Sem nome'}</span>
+                    <span className="text-[#43210D]/70 text-xs block truncate">{u.email}</span>
+                  </div>
+                </div>
+
+                {/* Status Badge */}
+                <div className="shrink-0">
+                  {status === 'Convite enviado' ? (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-300">
+                      <Send size={11} /> Convite
+                    </span>
+                  ) : status === 'Acesso bloqueado' ? (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-red-50 text-red-700 border border-red-300">
+                      <Lock size={11} /> Bloqueado
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-300">
+                      <Check size={11} /> Ativo
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[var(--color-border)]/60 text-xs">
+                <div>
+                  <span className="text-[10px] font-bold text-[#43210D]/50 uppercase block">Cargo Agência</span>
+                  <span className="font-medium text-[#43210D]">{u.agencyRole || '-'}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-[#43210D]/50 uppercase block mb-1">Cargo Site</span>
+                  <select 
+                    value={u.siteRole || u.role || 'editor'}
+                    onChange={(e) => handleUpdateRole(u.id, e.target.value)}
+                    disabled={u.uid === currentUser.uid}
+                    className="w-full bg-[#F3EDE0]/50 border border-[#CE892C]/30 rounded-lg px-2 py-1 text-xs font-semibold outline-none text-[#43210D]"
+                  >
+                    <option value="admin">Admin</option>
+                    <option value="editor">Editor</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-[var(--color-border)]/60">
+                {status === 'Convite enviado' && (
+                  <button
+                    onClick={() => setResendConfirmUser(u)}
+                    className="px-2.5 py-1.5 bg-amber-50 text-amber-800 border border-amber-300 rounded-lg text-xs font-bold flex items-center gap-1"
+                  >
+                    <Send size={12} /> Reenviar
+                  </button>
+                )}
+
+                {status === 'Ativo' && (
+                  <button
+                    onClick={() => setResetConfirmUser(u)}
+                    className="px-2.5 py-1.5 bg-blue-50 text-blue-800 border border-blue-300 rounded-lg text-xs font-bold flex items-center gap-1"
+                  >
+                    <Key size={12} /> Redefinir
+                  </button>
+                )}
+
+                <button
+                  onClick={() => setBlockConfirmUser(u)}
+                  className="p-1.5 bg-gray-50 text-gray-700 border border-gray-300 rounded-lg"
+                  title={status === 'Acesso bloqueado' ? 'Desbloquear Acesso' : 'Bloquear Acesso'}
+                >
+                  {status === 'Acesso bloqueado' ? <Unlock size={14} /> : <Lock size={14} />}
+                </button>
+
+                <button
+                  onClick={() => handleEditUser(u)}
+                  className="p-1.5 bg-[#F3EDE0] border border-[#CE892C]/30 rounded-lg text-[#43210D]"
+                  title="Editar Usuário"
+                >
+                  <Edit2 size={14} />
+                </button>
+
+                {u.uid !== currentUser.uid && (
+                  <button
+                    onClick={() => {
+                      setUserToDelete(u.id);
+                      setIsConfirmOpen(true);
+                    }}
+                    className="p-1.5 bg-red-50 text-red-600 border border-red-200 rounded-lg"
+                    title="Excluir Usuário"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Desktop Table (>= 769px) */}
+      <div className="hidden md:block bg-white border border-[var(--color-border)] rounded-3xl overflow-hidden shadow-xs">
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead className="bg-[#F3EDE0]/60 text-[#43210D]/70 text-[11px] uppercase tracking-wider font-extrabold border-b border-[var(--color-border)]">

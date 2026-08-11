@@ -22,6 +22,7 @@ import { Portfolio } from './components/Portfolio';
 import { Testimonials } from './components/Testimonials';
 import { ContactSection } from './components/ContactSection';
 import { Footer } from './components/Footer';
+import { SEOManager } from './components/SEOManager';
 
 // --- Scroll To Top Helper ---
 const ScrollToTop = () => {
@@ -174,6 +175,7 @@ export default function App() {
   return (
     <Router>
       <ScrollToTop />
+      <SEOManager />
       <AppContent isModalOpen={isModalOpen} setIsModalOpen={setIsModalOpen} />
     </Router>
   );
@@ -282,15 +284,17 @@ function AppContent({ isModalOpen, setIsModalOpen }: { isModalOpen: boolean, set
       </AnimatePresence>
 
       {/* Floating Honeycomb WhatsApp Button */}
-      <a 
-        href="https://wa.me/5511966558126" 
-        target="_blank"
-        rel="noopener noreferrer"
-        className="fixed bottom-8 right-8 z-50 w-14 h-14 clip-hex bg-[#FFC400] text-[#43210D] flex items-center justify-center shadow-2xl hover:scale-110 transition-transform group"
-        title="Conversar no WhatsApp"
-      >
-        <MessageCircle size={28} className="relative z-10" />
-      </a>
+      {!isAdmin && (
+        <a 
+          href="https://wa.me/5511966558126" 
+          target="_blank"
+          rel="noopener noreferrer"
+          className="fixed bottom-8 right-8 z-50 w-14 h-14 clip-hex bg-[#FFC400] text-[#43210D] flex items-center justify-center shadow-2xl hover:scale-110 transition-transform group"
+          title="Conversar no WhatsApp"
+        >
+          <MessageCircle size={28} className="relative z-10" />
+        </a>
+      )}
     </div>
   );
 }

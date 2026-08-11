@@ -128,6 +128,15 @@ h1, h2, h3, h4, .font-heading {
   background: #43210D;
 }
 
+/* Scrollbar None Utility for Horizontal Smooth Touch Scrolling */
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
 /* Marquee Infinite Loop Animation */
 @keyframes marquee {
   0% {

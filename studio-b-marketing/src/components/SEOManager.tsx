@@ -13,6 +13,8 @@ const DEFAULT_SEO: SEOConfig = {
   robots: 'index, follow',
 };
 
+const SITE_BASE_URL = 'https://www.studiobmkt.com.br';
+
 function getSEOForPath(pathname: string): SEOConfig {
   // Private / Admin Routes
   if (pathname.startsWith('/admin') || pathname.startsWith('/login')) {
@@ -67,6 +69,20 @@ function getSEOForPath(pathname: string): SEOConfig {
   return DEFAULT_SEO;
 }
 
+function getCanonicalUrl(pathname: string): string {
+  // Clean pathname: strip trailing slashes
+  const cleanPath = pathname === '/' ? '/' : pathname.replace(/\/+$/, '');
+
+  let targetPath = cleanPath;
+  if (cleanPath === '/sobre') {
+    targetPath = '/quem-somos';
+  } else if (cleanPath === '/segmentos') {
+    targetPath = '/marketing-para-telecom';
+  }
+
+  return targetPath === '/' ? `${SITE_BASE_URL}/` : `${SITE_BASE_URL}${targetPath}`;
+}
+
 export function SEOManager() {
   const { pathname } = useLocation();
 
@@ -94,20 +110,27 @@ export function SEOManager() {
     // 3. Open Graph
     updateMetaTag('meta[property="og:title"]', 'property', 'og:title', seo.title);
     updateMetaTag('meta[property="og:description"]', 'property', 'og:description', seo.description);
-    updateMetaTag('meta[property="og:image"]', 'property', 'og:image', 'https://www.studiobmkt.com.br/og-image.jpg');
+    updateMetaTag('meta[property="og:image"]', 'property', 'og:image', `${SITE_BASE_URL}/og-image.jpg`);
 
     // 4. Twitter
     updateMetaTag('meta[name="twitter:title"]', 'name', 'twitter:title', seo.title);
     updateMetaTag('meta[name="twitter:description"]', 'name', 'twitter:description', seo.description);
-    updateMetaTag('meta[name="twitter:image"]', 'name', 'twitter:image', 'https://www.studiobmkt.com.br/og-image.jpg');
+    updateMetaTag('meta[name="twitter:image"]', 'name', 'twitter:image', `${SITE_BASE_URL}/og-image.jpg`);
 
     // 5. Canonical URL & og:url
-    const siteBaseUrl = import.meta.env.VITE_SITE_URL || 'https://www.studiobmkt.com.br';
-    const normalizedBaseUrl = siteBaseUrl.replace(/\/$/, '');
-    const canonicalUrl = `${normalizedBaseUrl}${pathname === '/' ? '/' : pathname}`;
+    const canonicalUrl = getCanonicalUrl(pathname);
 
-    let canonicalLink = document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
-    if (!canonicalLink) {
+    // Guarantee strictly ONE <link rel="canonical"> in document.head
+    const canonicalLinks = Array.from(document.querySelectorAll('link[rel="canonical"]'));
+    let canonicalLink: HTMLLinkElement;
+
+    if (canonicalLinks.length > 0) {
+      canonicalLink = canonicalLinks[0] as HTMLLinkElement;
+      // Remove any duplicate canonical links if they exist
+      for (let i = 1; i < canonicalLinks.length; i++) {
+        canonicalLinks[i].remove();
+      }
+    } else {
       canonicalLink = document.createElement('link');
       canonicalLink.setAttribute('rel', 'canonical');
       document.head.appendChild(canonicalLink);

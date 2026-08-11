@@ -170,12 +170,46 @@ export default async function handler(req: any, res: any) {
     });
   }
 
-  // 3. Dispatch email with the complete official Firebase link via SMTP
+  // 3. Transform generated Firebase action link into application URL
+  let finalActionUrl = '';
+  try {
+    const parsedUrl = new URL(generatedLink);
+    const oobCode = parsedUrl.searchParams.get('oobCode');
+    const mode = parsedUrl.searchParams.get('mode') || 'resetPassword';
+    const apiKey = parsedUrl.searchParams.get('apiKey');
+    const continueUrl = parsedUrl.searchParams.get('continueUrl') || `${baseUrl}/admin/definir-senha`;
+    const lang = parsedUrl.searchParams.get('lang');
+
+    if (!oobCode) {
+      console.error('[FIREBASE ADMIN] Falha: oobCode ausente no link gerado pelo Firebase:', generatedLink);
+      return res.status(500).json({
+        success: false,
+        error: 'Erro na geração do link de redefinição: oobCode ausente.'
+      });
+    }
+
+    const targetUrl = new URL(`${baseUrl}/admin/definir-senha`);
+    targetUrl.searchParams.set('mode', mode);
+    targetUrl.searchParams.set('oobCode', oobCode);
+    if (apiKey) targetUrl.searchParams.set('apiKey', apiKey);
+    targetUrl.searchParams.set('continueUrl', continueUrl);
+    if (lang) targetUrl.searchParams.set('lang', lang);
+
+    finalActionUrl = targetUrl.toString();
+  } catch (urlErr) {
+    console.error('[FIREBASE ADMIN] Erro ao reescrever URL do Firebase:', urlErr);
+    return res.status(500).json({
+      success: false,
+      error: 'Erro ao processar URL de acesso para a aplicação.'
+    });
+  }
+
+  // 4. Dispatch email with finalActionUrl via SMTP
   const result = await sendAuthEmail({
     type: type === 'invite' ? 'invite' : 'reset_password',
     to: cleanEmail,
     firstName: firstName || cleanEmail.split('@')[0],
-    actionUrl: generatedLink,
+    actionUrl: finalActionUrl,
     origin: baseUrl,
   });
 

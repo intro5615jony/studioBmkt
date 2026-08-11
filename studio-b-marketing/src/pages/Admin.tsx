@@ -3932,110 +3932,80 @@ const BlogManager = () => {
 
   if (view === 'editor') {
     return (
-      <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <button 
-              onClick={() => setView('list')}
-              className="p-2 hover:bg-[var(--color-surface-hover)] rounded-xl transition-all"
-            >
-              <X size={24} />
-            </button>
-            <h3 className="text-2xl font-bold">{currentPost?.id ? 'Editar Post' : 'Novo Post'}</h3>
+      <div className="space-y-6 sm:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-300 w-full max-w-full overflow-hidden box-border">
+        {/* Form Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 pb-2 sm:pb-0 border-b sm:border-b-0 border-[var(--color-border)]/60">
+          <div className="flex items-center justify-between sm:justify-start gap-3 w-full sm:w-auto">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+              <button 
+                onClick={() => setView('list')}
+                className="p-2 hover:bg-[var(--color-surface-hover)] rounded-xl transition-all shrink-0 cursor-pointer text-[var(--color-ink)]"
+                title="Fechar"
+              >
+                <X size={20} className="sm:w-6 sm:h-6" />
+              </button>
+              <h3 className="text-xl sm:text-2xl font-bold font-heading text-[var(--color-ink)] truncate">
+                {currentPost?.id ? 'Editar Post' : 'Novo Post'}
+              </h3>
+            </div>
           </div>
-          <div className="flex gap-4">
+
+          <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto justify-end">
             <button 
               onClick={() => setView('list')}
-              className="px-6 py-3 rounded-xl font-bold text-[var(--color-ink)]/40 hover:bg-[var(--color-surface-hover)] transition-all"
+              className="flex-1 sm:flex-none px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-bold text-xs sm:text-sm text-[var(--color-ink)]/60 hover:text-[var(--color-ink)] hover:bg-[var(--color-surface-hover)] border sm:border-0 border-[var(--color-border)] transition-all text-center cursor-pointer"
             >
               Cancelar
             </button>
             <button 
               onClick={handleSave}
               disabled={isSaving}
-              className="bg-accent-gradient text-[var(--color-on-accent)] px-8 py-3 rounded-xl font-bold hover:scale-105 transition-all shadow-lg disabled:opacity-50 disabled:hover:scale-100 flex items-center gap-2"
+              className="flex-1 sm:flex-none bg-accent-gradient text-[var(--color-on-accent)] px-5 sm:px-8 py-2.5 sm:py-3 rounded-xl font-bold text-xs sm:text-sm hover:scale-105 transition-all shadow-md disabled:opacity-50 disabled:hover:scale-100 flex items-center justify-center gap-2 shrink-0 cursor-pointer"
             >
-              {isSaving ? <Loader2 className="animate-spin" size={20} /> : (currentPost?.published ? 'Publicar Post' : 'Salvar Post')}
+              {isSaving ? <Loader2 className="animate-spin" size={16} /> : (currentPost?.published ? 'Publicar Post' : 'Salvar Post')}
             </button>
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-8">
-          <div className="col-span-2 space-y-8">
-            {/* Main Content Card */}
-            <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-[2.5rem] p-8 space-y-6 shadow-sm">
-              <div>
-                <label className="block text-xs font-bold text-[var(--color-ink)]/40 uppercase tracking-widest mb-3">Título do Post</label>
-                <input 
-                  type="text" required
-                  placeholder="Digite um título impactante..."
-                  value={currentPost?.title || ''}
-                  onChange={(e) => setCurrentPost({ ...currentPost, title: e.target.value })}
-                  className="w-full bg-[var(--color-surface-muted)] border border-[var(--color-border)] rounded-2xl px-6 py-4 text-xl font-bold focus:border-[var(--color-accent)] outline-none transition-all"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-[var(--color-ink)]/40 uppercase tracking-widest mb-3">Conteúdo</label>
-                <div className="quill-container bg-[var(--color-surface-muted)] border border-[var(--color-border)] rounded-2xl overflow-hidden min-h-[500px]">
-                  <Quill 
-                    ref={quillRef}
-                    theme="snow"
-                    value={currentPost?.content || ''}
-                    onChange={(content) => setCurrentPost({ ...currentPost, content })}
-                    modules={quillModules}
-                    className="h-[450px]"
-                  />
-                </div>
-              </div>
+        {/* Form Layout Container */}
+        <div className="flex flex-col lg:grid lg:grid-cols-3 gap-6 lg:gap-8 w-full max-w-full box-border">
+          {/* Block A (Mobile Order 1 & 2): Title and Content */}
+          <div className="order-1 lg:col-span-2 lg:order-1 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl sm:rounded-3xl lg:rounded-[2.5rem] p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-6 shadow-xs w-full max-w-full box-border">
+            <div>
+              <label className="block text-xs font-bold text-[var(--color-ink)]/50 uppercase tracking-widest mb-2 sm:mb-3">Título do Post</label>
+              <input 
+                type="text" required
+                placeholder="Digite um título impactante..."
+                value={currentPost?.title || ''}
+                onChange={(e) => setCurrentPost({ ...currentPost, title: e.target.value })}
+                className="w-full bg-[var(--color-surface-muted)] border border-[var(--color-border)] rounded-xl sm:rounded-2xl px-3.5 sm:px-6 py-3 sm:py-4 text-base sm:text-xl font-bold focus:border-[var(--color-accent)] outline-none transition-all box-border text-[var(--color-ink)]"
+              />
             </div>
 
-            {/* SEO Section */}
-            <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-[2.5rem] p-8 space-y-6 shadow-sm">
-              <div className="flex items-center gap-2 mb-2">
-                <Search size={20} className="text-[var(--color-accent)]" />
-                <h4 className="font-bold text-lg">Configurações de SEO</h4>
-              </div>
-              <div className="grid grid-cols-2 gap-6">
-                <div className="col-span-2">
-                  <label className="block text-xs font-bold text-[var(--color-ink)]/40 uppercase tracking-widest mb-2">Slug (URL amigável)</label>
-                  <input 
-                    type="text"
-                    placeholder="ex: como-fazer-marketing-digital"
-                    value={currentPost?.slug || ''}
-                    onChange={(e) => setCurrentPost({ ...currentPost, slug: e.target.value })}
-                    className="w-full bg-[var(--color-surface-muted)] border border-[var(--color-border)] rounded-xl px-4 py-3 focus:border-[var(--color-accent)] outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-[var(--color-ink)]/40 uppercase tracking-widest mb-2">Meta Title</label>
-                  <input 
-                    type="text"
-                    value={currentPost?.metaTitle || ''}
-                    onChange={(e) => setCurrentPost({ ...currentPost, metaTitle: e.target.value })}
-                    className="w-full bg-[var(--color-surface-muted)] border border-[var(--color-border)] rounded-xl px-4 py-3 focus:border-[var(--color-accent)] outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-[var(--color-ink)]/40 uppercase tracking-widest mb-2">Meta Description</label>
-                  <textarea 
-                    value={currentPost?.metaDescription || ''}
-                    onChange={(e) => setCurrentPost({ ...currentPost, metaDescription: e.target.value })}
-                    className="w-full bg-[var(--color-surface-muted)] border border-[var(--color-border)] rounded-xl px-4 py-3 h-24 focus:border-[var(--color-accent)] outline-none resize-none"
-                  />
-                </div>
+            <div>
+              <label className="block text-xs font-bold text-[var(--color-ink)]/50 uppercase tracking-widest mb-2 sm:mb-3">Conteúdo</label>
+              <div className="quill-container bg-[var(--color-surface-muted)] border border-[var(--color-border)] rounded-xl sm:rounded-2xl overflow-hidden min-h-[300px] sm:min-h-[500px] w-full max-w-full box-border">
+                <Quill 
+                  ref={quillRef}
+                  theme="snow"
+                  value={currentPost?.content || ''}
+                  onChange={(content) => setCurrentPost({ ...currentPost, content })}
+                  modules={quillModules}
+                  className="h-[280px] sm:h-[450px] w-full max-w-full"
+                />
               </div>
             </div>
           </div>
 
-          <div className="space-y-8">
-            {/* Sidebar Settings */}
-            <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-[2.5rem] p-8 space-y-6 shadow-sm sticky top-8">
+          {/* Block B (Mobile Order 3, 4, 5, 6): Cover Image, Tags, Agendamento, Status */}
+          <div className="order-2 lg:col-span-1 lg:order-2 space-y-6 lg:space-y-8 w-full max-w-full box-border">
+            <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl sm:rounded-3xl lg:rounded-[2.5rem] p-4 sm:p-6 lg:p-8 space-y-5 sm:space-y-6 shadow-xs lg:sticky lg:top-8 w-full max-w-full box-border">
+              {/* Imagem de Capa */}
               <div>
-                <label className="block text-xs font-bold text-[var(--color-ink)]/40 uppercase tracking-widest mb-4">Imagem de Capa</label>
-                <div className="space-y-4">
+                <label className="block text-xs font-bold text-[var(--color-ink)]/50 uppercase tracking-widest mb-3">Imagem de Capa</label>
+                <div className="space-y-3 sm:space-y-4">
                   {currentPost?.imageUrl ? (
-                    <div className="relative group aspect-video rounded-2xl overflow-hidden border border-[var(--color-border)]">
+                    <div className="relative group aspect-video rounded-xl sm:rounded-2xl overflow-hidden border border-[var(--color-border)]">
                       <img src={currentPost.imageUrl} className="w-full h-full object-cover" />
                       <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                         <label htmlFor="post-image-upload" className="cursor-pointer p-3 bg-white/20 backdrop-blur-md rounded-full hover:bg-white/40 transition-all">
@@ -4044,9 +4014,9 @@ const BlogManager = () => {
                       </div>
                     </div>
                   ) : (
-                    <label htmlFor="post-image-upload" className="flex flex-col items-center justify-center aspect-video rounded-2xl border-2 border-dashed border-[var(--color-border)] hover:border-[var(--color-accent)] hover:bg-[var(--color-surface-hover)] transition-all cursor-pointer group">
-                      <Upload size={32} className="text-[var(--color-ink)]/20 group-hover:text-[var(--color-accent)] mb-2" />
-                      <span className="text-xs font-bold text-[var(--color-ink)]/40 group-hover:text-[var(--color-accent)]">Upload de Imagem</span>
+                    <label htmlFor="post-image-upload" className="flex flex-col items-center justify-center aspect-video rounded-xl sm:rounded-2xl border-2 border-dashed border-[var(--color-border)] hover:border-[var(--color-accent)] hover:bg-[var(--color-surface-hover)] transition-all cursor-pointer group p-4 text-center">
+                      <Upload size={28} className="text-[var(--color-ink)]/20 group-hover:text-[var(--color-accent)] mb-2 sm:w-8 sm:h-8" />
+                      <span className="text-xs font-bold text-[var(--color-ink)]/60 group-hover:text-[var(--color-accent)]">Upload de Imagem</span>
                     </label>
                   )}
                   <input 
@@ -4059,32 +4029,35 @@ const BlogManager = () => {
                 </div>
               </div>
 
+              {/* Tags */}
               <div>
-                <label className="block text-xs font-bold text-[var(--color-ink)]/40 uppercase tracking-widest mb-2">Tags</label>
+                <label className="block text-xs font-bold text-[var(--color-ink)]/50 uppercase tracking-widest mb-2">Tags</label>
                 <input 
                   type="text"
                   placeholder="marketing, design, tech..."
                   value={currentPost?.tags || ''}
                   onChange={(e) => setCurrentPost({ ...currentPost, tags: e.target.value })}
-                  className="w-full bg-[var(--color-surface-muted)] border border-[var(--color-border)] rounded-xl px-4 py-3 focus:border-[var(--color-accent)] outline-none"
+                  className="w-full bg-[var(--color-surface-muted)] border border-[var(--color-border)] rounded-xl px-3.5 sm:px-4 py-2.5 sm:py-3 text-sm focus:border-[var(--color-accent)] outline-none box-border text-[var(--color-ink)]"
                 />
               </div>
 
+              {/* Agendamento */}
               <div>
-                <label className="block text-xs font-bold text-[var(--color-ink)]/40 uppercase tracking-widest mb-2">Agendamento</label>
+                <label className="block text-xs font-bold text-[var(--color-ink)]/50 uppercase tracking-widest mb-2">Agendamento</label>
                 <div className="relative">
                   <input 
                     type="datetime-local"
                     value={currentPost?.publishedAt?.slice(0, 16) || ''}
                     onChange={(e) => setCurrentPost({ ...currentPost, publishedAt: e.target.value })}
-                    className="w-full bg-[var(--color-surface-muted)] border border-[var(--color-border)] rounded-xl px-4 py-3 focus:border-[var(--color-accent)] outline-none"
+                    className="w-full bg-[var(--color-surface-muted)] border border-[var(--color-border)] rounded-xl px-3.5 sm:px-4 py-2.5 sm:py-3 text-sm focus:border-[var(--color-accent)] outline-none box-border text-[var(--color-ink)]"
                   />
                 </div>
               </div>
 
-              <div className="pt-4 border-t border-[var(--color-border)]">
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-sm font-bold">Status do Post</span>
+              {/* Status do Post & Publicar imediatamente */}
+              <div className="pt-4 border-t border-[var(--color-border)] space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-bold text-[var(--color-ink)]">Status do Post</span>
                   <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase ${currentPost?.published ? 'bg-[var(--color-success)]/20 text-[var(--color-success)]' : 'bg-[var(--color-surface-hover)] text-[var(--color-ink)]/40'}`}>
                     {currentPost?.published ? 'Publicado' : 'Rascunho'}
                   </span>
@@ -4095,10 +4068,51 @@ const BlogManager = () => {
                     id="published"
                     checked={currentPost?.published || false}
                     onChange={(e) => setCurrentPost({ ...currentPost, published: e.target.checked })}
-                    className="w-5 h-5 rounded border-[var(--color-border)] bg-[var(--color-surface-muted)] text-[var(--color-accent)] focus:ring-[var(--color-accent)]"
+                    className="w-5 h-5 rounded border-[var(--color-border)] bg-[var(--color-surface-muted)] text-[var(--color-accent)] focus:ring-[var(--color-accent)] cursor-pointer shrink-0"
                   />
-                  <label htmlFor="published" className="text-sm font-bold">Publicar post imediatamente</label>
+                  <label htmlFor="published" className="text-xs sm:text-sm font-bold text-[var(--color-ink)] cursor-pointer select-none">
+                    Publicar post imediatamente
+                  </label>
                 </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Block C (Mobile Order 7): Configurações de SEO */}
+          <div className="order-3 lg:col-span-2 lg:order-3 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl sm:rounded-3xl lg:rounded-[2.5rem] p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-6 shadow-xs w-full max-w-full box-border">
+            <div className="flex items-center gap-2 mb-1">
+              <Search size={20} className="text-[var(--color-accent)] shrink-0" />
+              <h4 className="font-bold text-base sm:text-lg text-[var(--color-ink)]">Configurações de SEO</h4>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 w-full">
+              <div className="md:col-span-2 w-full">
+                <label className="block text-xs font-bold text-[var(--color-ink)]/50 uppercase tracking-widest mb-2">Slug (URL amigável)</label>
+                <input 
+                  type="text"
+                  placeholder="ex: como-fazer-marketing-digital"
+                  value={currentPost?.slug || ''}
+                  onChange={(e) => setCurrentPost({ ...currentPost, slug: e.target.value })}
+                  className="w-full bg-[var(--color-surface-muted)] border border-[var(--color-border)] rounded-xl px-3.5 sm:px-4 py-2.5 sm:py-3 text-sm focus:border-[var(--color-accent)] outline-none box-border text-[var(--color-ink)]"
+                />
+              </div>
+              <div className="col-span-1 w-full">
+                <label className="block text-xs font-bold text-[var(--color-ink)]/50 uppercase tracking-widest mb-2">Meta Title</label>
+                <input 
+                  type="text"
+                  placeholder="Título para buscadores..."
+                  value={currentPost?.metaTitle || ''}
+                  onChange={(e) => setCurrentPost({ ...currentPost, metaTitle: e.target.value })}
+                  className="w-full bg-[var(--color-surface-muted)] border border-[var(--color-border)] rounded-xl px-3.5 sm:px-4 py-2.5 sm:py-3 text-sm focus:border-[var(--color-accent)] outline-none box-border text-[var(--color-ink)]"
+                />
+              </div>
+              <div className="col-span-1 w-full">
+                <label className="block text-xs font-bold text-[var(--color-ink)]/50 uppercase tracking-widest mb-2">Meta Description</label>
+                <textarea 
+                  placeholder="Resumo para mecanismos de busca..."
+                  value={currentPost?.metaDescription || ''}
+                  onChange={(e) => setCurrentPost({ ...currentPost, metaDescription: e.target.value })}
+                  className="w-full bg-[var(--color-surface-muted)] border border-[var(--color-border)] rounded-xl px-3.5 sm:px-4 py-2.5 sm:py-3 h-24 text-sm focus:border-[var(--color-accent)] outline-none resize-none box-border text-[var(--color-ink)]"
+                />
               </div>
             </div>
           </div>
@@ -4108,21 +4122,74 @@ const BlogManager = () => {
   }
 
   return (
-    <div className="space-y-8">
-      <div className="flex items-center justify-between">
-        <h3 className="text-2xl font-bold">Gerenciar Blog</h3>
+    <div className="space-y-6 sm:space-y-8">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4 bg-[var(--color-surface-muted)] border border-[var(--color-border)] p-4 sm:p-6 rounded-2xl sm:rounded-3xl">
+        <div>
+          <h3 className="text-xl sm:text-2xl font-bold font-heading">Gerenciar Blog</h3>
+          <p className="text-xs text-[var(--color-ink)]/60 mt-1">Crie e edite artigos do blog.</p>
+        </div>
         <button 
           onClick={() => {
             setCurrentPost({ title: '', description: '', content: '', imageUrl: '', tags: '', published: false, publishedAt: new Date().toISOString() });
             setView('editor');
           }}
-          className="bg-accent-gradient text-[var(--color-on-accent)] px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:scale-105 transition-all"
+          className="w-full sm:w-auto bg-accent-gradient text-[var(--color-on-accent)] px-5 py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:scale-105 transition-all text-xs sm:text-sm shadow-md shrink-0 cursor-pointer"
         >
-          <Plus size={20} /> Novo Post
+          <Plus size={18} /> Novo Post
         </button>
       </div>
 
-      <div className="bg-[var(--color-surface-muted)] border border-[var(--color-border)] rounded-3xl overflow-hidden">
+      {/* Mobile Cards View (<= 768px) */}
+      <div className="block md:hidden space-y-3.5">
+        {posts.map(post => (
+          <div key={post.id} className="bg-[var(--color-surface-muted)] border border-[var(--color-border)] rounded-2xl p-4 space-y-3 shadow-xs">
+            <div className="flex gap-3 items-start">
+              <div className="w-16 h-12 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] overflow-hidden shrink-0">
+                {post.imageUrl ? (
+                  <img src={post.imageUrl} alt={post.title} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-[10px] text-[var(--color-ink)]/40 font-bold">Sem Capa</div>
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <h4 className="font-bold text-sm text-[var(--color-ink)] line-clamp-2 leading-snug">{post.title}</h4>
+                <p className="text-[var(--color-ink)]/50 text-xs line-clamp-1 mt-0.5">{post.description || 'Sem descrição'}</p>
+              </div>
+            </div>
+            <div className="flex items-center justify-between gap-2 pt-2 border-t border-[var(--color-border)]/60 text-xs">
+              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${post.published ? 'bg-[var(--color-success)]/20 text-[var(--color-success)]' : 'bg-[var(--color-surface-hover)] text-[var(--color-ink)]/60'}`}>
+                {post.published ? 'Publicado' : 'Rascunho'}
+              </span>
+              <span className="text-[var(--color-ink)]/50 text-[11px]">
+                {post.publishedAt ? new Date(post.publishedAt).toLocaleDateString('pt-BR') : (post.createdAt?.toDate ? post.createdAt.toDate().toLocaleDateString('pt-BR') : 'Recente')}
+              </span>
+            </div>
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-[var(--color-border)]/60">
+              <button 
+                onClick={() => {
+                  setCurrentPost({ ...post, tags: post.tags?.join(', ') || '' });
+                  setView('editor');
+                }}
+                className="px-3 py-1.5 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl font-bold text-xs flex items-center gap-1.5 text-[var(--color-ink)] cursor-pointer"
+              >
+                <Edit2 size={14} /> Editar
+              </button>
+              <button 
+                onClick={() => {
+                  setPostToDelete(post.id);
+                  setIsConfirmOpen(true);
+                }}
+                className="p-1.5 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl text-[var(--color-error)] cursor-pointer"
+              >
+                <Trash2 size={16} />
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Desktop Table (>= 769px) */}
+      <div className="hidden md:block bg-[var(--color-surface-muted)] border border-[var(--color-border)] rounded-3xl overflow-hidden shadow-xs">
         <table className="w-full text-left">
           <thead>
             <tr className="border-b border-[var(--color-border)] bg-[var(--color-surface-muted)]">
@@ -4161,7 +4228,7 @@ const BlogManager = () => {
                         setCurrentPost({ ...post, tags: post.tags?.join(', ') || '' });
                         setView('editor');
                       }}
-                      className="p-2 text-[var(--color-ink)]/40 hover:text-[var(--color-accent)] transition-colors"
+                      className="p-2 text-[var(--color-ink)]/40 hover:text-[var(--color-accent)] transition-colors cursor-pointer"
                     >
                       <Edit2 size={18} />
                     </button>
@@ -4170,7 +4237,7 @@ const BlogManager = () => {
                         setPostToDelete(post.id);
                         setIsConfirmOpen(true);
                       }}
-                      className="p-2 text-[var(--color-ink)]/40 hover:text-[var(--color-error)] transition-colors"
+                      className="p-2 text-[var(--color-ink)]/40 hover:text-[var(--color-error)] transition-colors cursor-pointer"
                     >
                       <Trash2 size={18} />
                     </button>

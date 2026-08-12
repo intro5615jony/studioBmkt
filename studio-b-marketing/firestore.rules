@@ -63,6 +63,8 @@ service cloud.firestore {
         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin') ||
         (request.auth.token.email == "contatorebecafurtado@gmail.com" && 
+         (request.auth.token.email_verified == true || request.auth.token.email_verified == null)) ||
+        (request.auth.token.email == "intro5615@gmail.com" && 
          (request.auth.token.email_verified == true || request.auth.token.email_verified == null))
       );
     }
@@ -146,6 +148,12 @@ service cloud.firestore {
         request.resource.data.role == 'admin'
       );
       allow update, delete: if isAdmin();
+    }
+
+    // Settings: Publicly readable configuration, writeable by admin
+    match /settings/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
     }
 
     // Default deny

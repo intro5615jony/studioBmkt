@@ -2269,6 +2269,18 @@ const ServicesManager = () => {
     });
   }, []);
 
+  const handleServiceImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const resized = await resizeImage(reader.result as string, 800, 600, file.type);
+        setCurrentService((prev: any) => ({ ...prev, imageUrl: resized }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
@@ -2276,7 +2288,8 @@ const ServicesManager = () => {
       const data = {
         title: currentService.title,
         description: currentService.description,
-        iconName: currentService.iconName,
+        iconName: currentService.iconName || 'Zap',
+        imageUrl: currentService.imageUrl || '',
         order: currentService.order || services.length
       };
 
@@ -2328,7 +2341,7 @@ const ServicesManager = () => {
         </div>
         <button 
           onClick={() => {
-            setCurrentService({ title: '', description: '', iconName: 'Zap', order: services.length });
+            setCurrentService({ title: '', description: '', iconName: 'Zap', imageUrl: '', order: services.length });
             setIsModalOpen(true);
           }}
           className="w-full sm:w-auto bg-accent-gradient text-[var(--color-on-accent)] px-5 py-3 sm:py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:scale-105 transition-all text-xs sm:text-sm shadow-sm cursor-pointer"
@@ -2341,8 +2354,12 @@ const ServicesManager = () => {
         {services.map((service) => (
           <div key={service.id} className="bg-[var(--color-surface-muted)] border border-[var(--color-border)] p-4 sm:p-6 rounded-2xl sm:rounded-3xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 group shadow-xs">
             <div className="flex items-start sm:items-center gap-3.5 sm:gap-6">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-accent-gradient rounded-xl flex items-center justify-center text-[var(--color-on-accent)] shrink-0 shadow-xs">
-                {getIcon(service.iconName)}
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-accent-gradient rounded-xl flex items-center justify-center text-[var(--color-on-accent)] shrink-0 shadow-xs overflow-hidden">
+                {service.imageUrl ? (
+                  <img src={service.imageUrl} alt={service.title} className="w-full h-full object-cover" />
+                ) : (
+                  getIcon(service.iconName)
+                )}
               </div>
               <div className="min-w-0 flex-1">
                 <h4 className="font-bold text-sm sm:text-base text-[var(--color-ink)]">{service.title}</h4>
@@ -2391,7 +2408,36 @@ const ServicesManager = () => {
             />
           </div>
           <div>
-            <label className="block text-xs font-bold text-[var(--color-ink)]/40 uppercase tracking-widest mb-2">Ícone</label>
+            <label className="block text-xs font-bold text-[var(--color-ink)]/40 uppercase tracking-widest mb-2">Imagem de Destaque (Capa)</label>
+            {currentService?.imageUrl && (
+              <div className="mb-3 relative w-full h-32 rounded-xl overflow-hidden border border-[var(--color-border)] group">
+                <img src={currentService.imageUrl} alt="Preview" className="w-full h-full object-cover" />
+                <button
+                  type="button"
+                  onClick={() => setCurrentService({ ...currentService, imageUrl: '' })}
+                  className="absolute top-2 right-2 bg-black/70 text-white p-1.5 rounded-full hover:bg-black transition-all cursor-pointer"
+                  title="Remover imagem"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            )}
+            <div className="flex flex-col sm:flex-row gap-2">
+              <input 
+                type="text" 
+                placeholder="https://images.unsplash.com/..."
+                value={currentService?.imageUrl || ''}
+                onChange={(e) => setCurrentService({ ...currentService, imageUrl: e.target.value })}
+                className="flex-1 bg-[var(--color-surface-muted)] border border-[var(--color-border)] rounded-xl px-4 py-3 focus:border-[var(--color-accent)] outline-none text-xs sm:text-sm"
+              />
+              <label className="cursor-pointer bg-[var(--color-surface)] border border-[var(--color-border)] hover:bg-[var(--color-accent)] hover:text-[var(--color-on-accent)] transition-all px-4 py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 shrink-0">
+                <Upload size={16} /> Upload de Foto
+                <input type="file" accept="image/*" onChange={handleServiceImageChange} className="hidden" />
+              </label>
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-[var(--color-ink)]/40 uppercase tracking-widest mb-2">Ícone (Símbolo)</label>
             <div className="grid grid-cols-4 gap-4">
               {availableIcons.map((item) => (
                 <button

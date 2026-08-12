@@ -29,6 +29,7 @@ import {
 import { auth, db } from '../firebase';
 import { sendCustomAuthEmail } from '../lib/emailClient';
 import ThemeToggle from '../components/ThemeToggle';
+import { DEFAULT_MODULES } from '../components/ServicesBento';
 import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
 import { 
@@ -1269,6 +1270,8 @@ const DashboardOverview = ({ onNavigate }: { onNavigate?: (tab: Tab) => void }) 
     const unsubscribes = collections.map(col => 
       onSnapshot(collection(db, col), (snap) => {
         setStats(prev => ({ ...prev, [col]: snap.size }));
+      }, (err) => {
+        console.warn(`Error loading ${col} stats:`, err);
       })
     );
     return () => unsubscribes.forEach(unsub => unsub());
@@ -1278,18 +1281,19 @@ const DashboardOverview = ({ onNavigate }: { onNavigate?: (tab: Tab) => void }) 
     setSeedMessage(null);
     setIsSeeding(true);
     try {
-      // Seed Services
-      const initialServices = [
-        { title: 'Social Media', iconName: 'Instagram', order: 0, description: 'Gestão estratégica de redes sociais focada em engajamento, autoridade e conversão de seguidores em clientes.' },
-        { title: 'Tráfego Pago', iconName: 'Target', order: 1, description: 'Campanhas de alta performance no Google Ads e Meta Ads para escalar seu faturamento de forma previsível.' },
-        { title: 'Branding', iconName: 'Award', order: 2, description: 'Criação de identidades visuais memoráveis e posicionamento de marca que conecta emocionalmente com seu público.' },
-        { title: 'Web Design', iconName: 'Globe', order: 3, description: 'Landing Pages e sites institucionais de alto impacto visual, otimizados para conversão e experiência do usuário.' },
-        { title: 'SEO Estratégico', iconName: 'Search', order: 4, description: 'Otimização completa para mecanismos de busca, garantindo que sua marca seja encontrada por quem realmente busca sua solução.' },
-        { title: 'Consultoria', iconName: 'Rocket', order: 5, description: 'Acompanhamento estratégico personalizado para identificar gargalos e acelerar o crescimento do seu negócio digital.' },
-      ];
-
-      for (const service of initialServices) {
-        await addDoc(collection(db, 'services'), service);
+      // Seed Services safely
+      for (let i = 0; i < DEFAULT_MODULES.length; i++) {
+        const m = DEFAULT_MODULES[i];
+        await addDoc(collection(db, 'services'), {
+          title: m.title,
+          description: m.desc,
+          imageUrl: m.imageUrl,
+          highlights: m.highlights,
+          isDark: !!m.isDark,
+          iconName: 'Zap',
+          status: 'Ativo',
+          order: i
+        });
       }
 
       // Seed Brands
@@ -1396,6 +1400,9 @@ const LeadsManager = () => {
     const q = query(collection(db, 'proposals'), orderBy('createdAt', 'desc'));
     return onSnapshot(q, (snap) => {
       setLeads(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as ProposalLead)));
+      setLoading(false);
+    }, (err) => {
+      console.warn("Error loading leads:", err);
       setLoading(false);
     });
   }, []);
@@ -1828,6 +1835,9 @@ const BrandsManager = () => {
     const q = query(collection(db, 'brands'), orderBy('order', 'asc'));
     return onSnapshot(q, (snap) => {
       setBrands(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      setLoading(false);
+    }, (err) => {
+      console.warn("Error loading brands:", err);
       setLoading(false);
     });
   }, []);
@@ -2263,8 +2273,37 @@ const ServicesManager = () => {
 
   useEffect(() => {
     const q = query(collection(db, 'services'), orderBy('order', 'asc'));
-    return onSnapshot(q, (snap) => {
-      setServices(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    return onSnapshot(q, async (snap) => {
+      const fetchedDocs = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setServices(fetchedDocs);
+      setLoading(false);
+
+      // Auto-sincronização de serviços padrão ausentes sem duplicar os já existentes
+      if (!snap.metadata.hasPendingWrites) {
+        const existingTitles = fetchedDocs.map((s: any) => (s.title || '').toLowerCase().trim());
+        const missingServices = DEFAULT_MODULES.filter(
+          m => !existingTitles.some(t => t === m.title.toLowerCase().trim())
+        );
+
+        if (missingServices.length > 0) {
+          for (let i = 0; i < missingServices.length; i++) {
+            const m = missingServices[i];
+            const origIndex = DEFAULT_MODULES.findIndex(item => item.title === m.title);
+            await addDoc(collection(db, 'services'), {
+              title: m.title,
+              description: m.desc,
+              imageUrl: m.imageUrl,
+              highlights: m.highlights,
+              isDark: !!m.isDark,
+              iconName: 'Zap',
+              status: 'Ativo',
+              order: origIndex !== -1 ? origIndex : fetchedDocs.length + i
+            });
+          }
+        }
+      }
+    }, (err) => {
+      console.warn("Error loading services:", err);
       setLoading(false);
     });
   }, []);
@@ -2290,7 +2329,10 @@ const ServicesManager = () => {
         description: currentService.description,
         iconName: currentService.iconName || 'Zap',
         imageUrl: currentService.imageUrl || '',
-        order: currentService.order || services.length
+        highlights: currentService.highlights || [],
+        isDark: currentService.isDark !== undefined ? currentService.isDark : false,
+        status: currentService.status || 'Ativo',
+        order: currentService.order !== undefined ? currentService.order : services.length
       };
 
       if (currentService.id) {
@@ -3271,12 +3313,17 @@ const TestimonialsManager = () => {
     const unsubTestimonials = onSnapshot(collection(db, 'testimonials'), (snap) => {
       setItems(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       setLoading(false);
+    }, (err) => {
+      console.warn("Error loading testimonials:", err);
+      setLoading(false);
     });
 
     const unsubSettings = onSnapshot(doc(db, 'settings', 'googleReviews'), (docSnap) => {
       if (docSnap.exists()) {
         setLastSyncAt(docSnap.data().lastSyncAt);
       }
+    }, (err) => {
+      console.warn("Error loading settings/googleReviews:", err);
     });
 
     return () => {
@@ -3840,6 +3887,9 @@ const BlogManager = () => {
     return onSnapshot(q, (snap) => {
       setPosts(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       setLoading(false);
+    }, (err) => {
+      console.warn("Error loading posts:", err);
+      setLoading(false);
     });
   }, []);
 
@@ -4318,6 +4368,9 @@ const NewsletterManager = () => {
     return onSnapshot(q, (snap) => {
       setEmails(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       setLoading(false);
+    }, (err) => {
+      console.warn("Error loading newsletter emails:", err);
+      setLoading(false);
     });
   }, []);
 
@@ -4433,6 +4486,9 @@ const UsersManager = ({ currentUser }: { currentUser: AdminUser }) => {
   useEffect(() => {
     return onSnapshot(collection(db, 'users'), (snap) => {
       setUsers(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      setLoading(false);
+    }, (err) => {
+      console.warn("Error loading users:", err);
       setLoading(false);
     });
   }, []);

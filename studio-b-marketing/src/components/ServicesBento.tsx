@@ -18,7 +18,7 @@ interface ServicesBentoProps {
   onOpenModal: () => void;
 }
 
-const DEFAULT_MODULES: ServiceModule[] = [
+export const DEFAULT_MODULES: ServiceModule[] = [
   {
     id: '01',
     title: 'BRANDING & IDENTIDADE VISUAL',

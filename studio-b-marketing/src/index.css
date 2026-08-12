@@ -157,4 +157,47 @@ h1, h2, h3, h4, .font-heading {
   animation-play-state: paused;
 }
 
+/* Quill Editor Mobile Responsiveness */
+.quill-container .ql-toolbar.ql-snow {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  row-gap: 4px;
+  border-top-left-radius: 1rem !important;
+  border-top-right-radius: 1rem !important;
+  border-color: var(--color-border) !important;
+  background-color: var(--color-surface) !important;
+  padding: 8px !important;
+  max-width: 100% !important;
+}
+
+.quill-container .ql-toolbar .ql-formats {
+  margin-right: 6px !important;
+  margin-bottom: 4px !important;
+  display: inline-flex !important;
+  flex-wrap: wrap !important;
+  align-items: center;
+}
+
+.quill-container .ql-container.ql-snow {
+  border-bottom-left-radius: 1rem !important;
+  border-bottom-right-radius: 1rem !important;
+  border-color: var(--color-border) !important;
+  max-width: 100% !important;
+  width: 100% !important;
+}
+
+.quill-container .ql-editor {
+  min-height: 250px;
+  max-height: 450px;
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+@media (max-width: 640px) {
+  .quill-container .ql-editor {
+    min-height: 200px;
+    padding: 12px !important;
+  }
+}
+
 

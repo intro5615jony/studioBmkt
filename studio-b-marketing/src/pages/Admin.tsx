@@ -26,8 +26,7 @@ import {
   setDoc,
   serverTimestamp
 } from 'firebase/firestore';
-import { ref, uploadBytes, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
-import { auth, db, storage } from '../firebase';
+import { auth, db } from '../firebase';
 import { sendCustomAuthEmail } from '../lib/emailClient';
 import ThemeToggle from '../components/ThemeToggle';
 import { DEFAULT_MODULES } from '../components/ServicesBento';
@@ -253,133 +252,7 @@ const resizeImage = (base64Str: string, maxWidth = 400, maxHeight = 400, mimeTyp
   });
 };
 
-const compressAndOptimizeImage = (file: File, maxDim = 1200): Promise<{ blob: Blob; mimeType: string; extension: string }> => {
-  return new Promise((resolve, reject) => {
-    if (file.type === 'image/svg+xml') {
-      resolve({ blob: file, mimeType: 'image/svg+xml', extension: 'svg' });
-      return;
-    }
 
-    const timer = setTimeout(() => {
-      reject({ code: 'image/compression_timeout', message: 'Timeout de 5s ao otimizar imagem localmente.' });
-    }, 5000);
-
-    const reader = new FileReader();
-    reader.onerror = () => {
-      clearTimeout(timer);
-      reject({ code: 'file/read_error', message: 'Erro ao ler o arquivo de imagem' });
-    };
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onerror = () => {
-        clearTimeout(timer);
-        reject({ code: 'image/load_error', message: 'Erro ao carregar a imagem selecionada' });
-      };
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        let width = img.width;
-        let height = img.height;
-
-        if (width > maxDim || height > maxDim) {
-          if (width > height) {
-            height = Math.round((height * maxDim) / width);
-            width = maxDim;
-          } else {
-            width = Math.round((width * maxDim) / height);
-            height = maxDim;
-          }
-        }
-
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) {
-          clearTimeout(timer);
-          reject({ code: 'canvas/context_error', message: 'Contexto do Canvas indisponível' });
-          return;
-        }
-
-        ctx.clearRect(0, 0, width, height);
-        ctx.drawImage(img, 0, 0, width, height);
-
-        const isPng = file.type === 'image/png';
-        const exportType = isPng ? 'image/png' : 'image/jpeg';
-        const extension = isPng ? 'png' : 'jpg';
-
-        canvas.toBlob((blob) => {
-          clearTimeout(timer);
-          if (blob) {
-            resolve({ blob, mimeType: exportType, extension });
-          } else {
-            reject({ code: 'canvas/blob_error', message: 'Erro na otimização da imagem' });
-          }
-        }, exportType, 0.85);
-      };
-      img.src = e.target?.result as string;
-    };
-    reader.readAsDataURL(file);
-  });
-};
-
-const uploadServiceImageToStorage = async (file: File, serviceId?: string): Promise<string> => {
-  const { blob, mimeType, extension } = await compressAndOptimizeImage(file);
-  
-  if (!(blob instanceof Blob) || blob.size === 0) {
-    console.error('UPLOAD_ERROR', { code: 'invalid-argument', message: 'O arquivo otimizado não é um Blob/File válido.' });
-    throw { code: 'invalid-argument', message: 'O arquivo de imagem otimizado é inválido.' };
-  }
-
-  const folderId = serviceId || `new_${Date.now()}`;
-  const fileName = `cover-${Date.now()}.${extension}`;
-  const storagePath = `services/${folderId}/${fileName}`;
-  const storageRef = ref(storage, storagePath);
-
-  console.log('UPLOAD_START', { fileName, fileSize: blob.size, mimeType, storagePath });
-
-  return new Promise<string>((resolve, reject) => {
-    const uploadTask = uploadBytesResumable(storageRef, blob, { contentType: mimeType });
-
-    const timeoutId = setTimeout(() => {
-      console.warn('UPLOAD_CANCELLED', { storagePath, reason: 'Timeout de 20s excedido' });
-      try {
-        uploadTask.cancel();
-      } catch (cancelErr) {
-        console.error('UPLOAD_ERROR ao cancelar task:', cancelErr);
-      }
-    }, 20000);
-
-    uploadTask.on(
-      'state_changed',
-      (snapshot) => {
-        const progress = snapshot.totalBytes > 0 ? (snapshot.bytesTransferred / snapshot.totalBytes) * 100 : 0;
-        console.log('UPLOAD_PROGRESS', `${progress.toFixed(1)}% (${snapshot.bytesTransferred}/${snapshot.totalBytes} bytes)`);
-      },
-      (error) => {
-        clearTimeout(timeoutId);
-        if (error.code === 'storage/canceled') {
-          console.error('UPLOAD_CANCELLED', { code: 'storage/canceled', message: 'Upload cancelado devido ao limite de tempo de 20s.' });
-          console.error('UPLOAD_ERROR', { code: 'storage/canceled', message: 'Upload cancelado (timeout 20s).' });
-          reject({ code: 'storage/canceled', message: 'Upload cancelado: tempo limite de 20 segundos excedido.' });
-        } else {
-          console.error('UPLOAD_ERROR', { code: error.code || 'storage/unknown', message: error.message || 'Falha no Storage' });
-          reject({ code: error.code || 'storage/unknown', message: error.message || 'Falha no upload para o Storage' });
-        }
-      },
-      async () => {
-        clearTimeout(timeoutId);
-        console.log('UPLOAD_COMPLETE', storagePath);
-        try {
-          const downloadUrl = await getDownloadURL(storageRef);
-          console.log('DOWNLOAD_URL_SUCCESS', downloadUrl);
-          resolve(downloadUrl);
-        } catch (dlErr: any) {
-          console.error('UPLOAD_ERROR', { code: dlErr?.code || 'download_url_failed', message: dlErr?.message || 'Erro ao obter URL' });
-          reject({ code: dlErr?.code || 'download_url_failed', message: dlErr?.message || 'Erro ao obter URL de download' });
-        }
-      }
-    );
-  });
-};
 
 const Modal = ({ isOpen, onClose, title, children, size = 'default' }: { isOpen: boolean, onClose: () => void, title: string, children: React.ReactNode, size?: 'default' | 'large' }) => {
   if (!isOpen) return null;
@@ -2379,7 +2252,6 @@ const ServicesManager = () => {
   const [serviceToDelete, setServiceToDelete] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [isUploadingImage, setIsUploadingImage] = useState(false);
 
   const availableIcons = [
     { name: 'Target', icon: Target },
@@ -2443,78 +2315,15 @@ const ServicesManager = () => {
     });
   }, []);
 
-  const handleServiceImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setIsUploadingImage(true);
-      const previousUrl = currentService?.imageUrl || '';
-      let tempPreviewUrl = '';
-
-      try {
-        // Pré-visualização instantânea no formulário
-        tempPreviewUrl = URL.createObjectURL(file);
-        setCurrentService((prev: any) => ({ ...prev, imageUrl: tempPreviewUrl }));
-
-        // Upload da imagem otimizada para o Firebase Storage
-        const downloadUrl = await uploadServiceImageToStorage(file, currentService?.id);
-        
-        // Sucesso: substitui o preview blob: pela URL HTTPS final
-        setCurrentService((prev: any) => ({ ...prev, imageUrl: downloadUrl }));
-
-        if (typeof window !== 'undefined' && (window as any).showAdminToast) {
-          (window as any).showAdminToast('Imagem enviada e vinculada no Storage com sucesso!', 'success');
-        }
-      } catch (err: any) {
-        const errCode = err?.code || 'storage/upload_failed';
-        const errMsg = err?.message || 'Falha no upload da imagem';
-
-        console.error('UPLOAD_ERROR', { code: errCode, message: errMsg });
-
-        // Em caso de erro/cancelamento: restaura a URL antiga (removendo blob: temporário)
-        setCurrentService((prev: any) => ({ ...prev, imageUrl: previousUrl }));
-
-        if (typeof window !== 'undefined' && (window as any).showAdminToast) {
-          (window as any).showAdminToast(`Erro no upload (${errCode}): ${errMsg}`, 'error');
-        }
-      } finally {
-        if (tempPreviewUrl && tempPreviewUrl.startsWith('blob:')) {
-          try {
-            URL.revokeObjectURL(tempPreviewUrl);
-          } catch (_) {}
-        }
-        setIsUploadingImage(false);
-        e.target.value = '';
-      }
-    }
-  };
-
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isUploadingImage) {
-      if (typeof window !== 'undefined' && (window as any).showAdminToast) {
-        (window as any).showAdminToast('Aguarde a conclusão do upload da imagem antes de salvar.', 'warning');
-      }
-      return;
-    }
-
     setIsSaving(true);
     try {
-      let finalImageUrl = currentService.imageUrl || '';
-
-      // Garantia de segurança: se a URL ainda for base64 ou blob temporário, envia para o Firebase Storage
-      if (finalImageUrl.startsWith('data:image/') || finalImageUrl.startsWith('blob:')) {
-        const res = await fetch(finalImageUrl);
-        const fetchedBlob = await res.blob();
-        const ext = fetchedBlob.type.includes('png') ? 'png' : 'jpg';
-        const file = new File([fetchedBlob], `cover-${Date.now()}.${ext}`, { type: fetchedBlob.type || 'image/jpeg' });
-        finalImageUrl = await uploadServiceImageToStorage(file, currentService?.id);
-      }
-
       const data = {
         title: currentService.title,
         description: currentService.description,
         iconName: currentService.iconName || 'Zap',
-        imageUrl: finalImageUrl,
+        imageUrl: currentService.imageUrl || '',
         highlights: currentService.highlights || [],
         isDark: currentService.isDark !== undefined ? currentService.isDark : false,
         status: currentService.status || 'Ativo',
@@ -2636,7 +2445,7 @@ const ServicesManager = () => {
             />
           </div>
           <div>
-            <label className="block text-xs font-bold text-[var(--color-ink)]/40 uppercase tracking-widest mb-2">Imagem de Destaque (Capa)</label>
+            <label className="block text-xs font-bold text-[var(--color-ink)]/40 uppercase tracking-widest mb-2">URL da Imagem de Destaque (Capa)</label>
             {currentService?.imageUrl && (
               <div className="mb-3 relative w-full h-32 rounded-xl overflow-hidden border border-[var(--color-border)] group">
                 <img src={currentService.imageUrl} alt="Preview" className="w-full h-full object-cover" />
@@ -2650,20 +2459,13 @@ const ServicesManager = () => {
                 </button>
               </div>
             )}
-            <div className="flex flex-col sm:flex-row gap-2">
-              <input 
-                type="text" 
-                placeholder="https://images.unsplash.com/..."
-                value={currentService?.imageUrl || ''}
-                onChange={(e) => setCurrentService({ ...currentService, imageUrl: e.target.value })}
-                className="flex-1 bg-[var(--color-surface-muted)] border border-[var(--color-border)] rounded-xl px-4 py-3 focus:border-[var(--color-accent)] outline-none text-xs sm:text-sm"
-              />
-              <label className={`cursor-pointer bg-[var(--color-surface)] border border-[var(--color-border)] hover:bg-[var(--color-accent)] hover:text-[var(--color-on-accent)] transition-all px-4 py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 shrink-0 ${isUploadingImage ? 'opacity-50 pointer-events-none' : ''}`}>
-                {isUploadingImage ? <Loader2 className="animate-spin" size={16} /> : <Upload size={16} />}
-                {isUploadingImage ? 'Enviando...' : 'Upload de Foto'}
-                <input type="file" accept="image/*" onChange={handleServiceImageChange} disabled={isUploadingImage} className="hidden" />
-              </label>
-            </div>
+            <input 
+              type="url" 
+              placeholder="https://images.unsplash.com/..."
+              value={currentService?.imageUrl || ''}
+              onChange={(e) => setCurrentService({ ...currentService, imageUrl: e.target.value })}
+              className="w-full bg-[var(--color-surface-muted)] border border-[var(--color-border)] rounded-xl px-4 py-3 focus:border-[var(--color-accent)] outline-none text-xs sm:text-sm"
+            />
           </div>
           <div>
             <label className="block text-xs font-bold text-[var(--color-ink)]/40 uppercase tracking-widest mb-2">Ícone (Símbolo)</label>
@@ -2695,10 +2497,10 @@ const ServicesManager = () => {
           </div>
           <button 
             type="submit" 
-            disabled={isSaving || isUploadingImage}
+            disabled={isSaving}
             className="w-full bg-[var(--color-accent)] text-[var(--color-bg)] py-4 rounded-xl font-bold hover:scale-[1.02] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
           >
-            {isSaving ? <Loader2 className="animate-spin" size={20} /> : (isUploadingImage ? 'Aguardando Upload de Foto...' : 'Salvar Serviço')}
+            {isSaving ? <Loader2 className="animate-spin" size={20} /> : 'Salvar Serviço'}
           </button>
         </form>
       </Modal>

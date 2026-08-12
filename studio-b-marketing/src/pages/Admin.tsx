@@ -26,7 +26,8 @@ import {
   setDoc,
   serverTimestamp
 } from 'firebase/firestore';
-import { auth, db } from '../firebase';
+import { ref, uploadBytes, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { auth, db, storage } from '../firebase';
 import { sendCustomAuthEmail } from '../lib/emailClient';
 import ThemeToggle from '../components/ThemeToggle';
 import { DEFAULT_MODULES } from '../components/ServicesBento';
@@ -170,8 +171,10 @@ interface FirestoreErrorInfo {
 }
 
 const handleFirestoreError = (error: unknown, operationType: OperationType, path: string | null) => {
+  const errCode = (error as any)?.code || 'unknown';
+  const errMessage = error instanceof Error ? error.message : String(error);
   const errInfo: FirestoreErrorInfo = {
-    error: error instanceof Error ? error.message : String(error),
+    error: errMessage,
     authInfo: {
       userId: auth.currentUser?.uid,
       email: auth.currentUser?.email,
@@ -190,8 +193,9 @@ const handleFirestoreError = (error: unknown, operationType: OperationType, path
   };
   console.error('Firestore Error: ', JSON.stringify(errInfo));
   
+  const toastMsg = `Erro Firestore (${errCode}): ${errMessage}`;
   if ((window as any).showAdminToast) {
-    (window as any).showAdminToast('Erro ao salvar no banco de dados. Verifique suas permissões.', 'error');
+    (window as any).showAdminToast(toastMsg, 'error');
   }
   
   throw new Error(JSON.stringify(errInfo));
@@ -246,6 +250,134 @@ const resizeImage = (base64Str: string, maxWidth = 400, maxHeight = 400, mimeTyp
     img.onerror = () => {
       resolve(base64Str);
     };
+  });
+};
+
+const compressAndOptimizeImage = (file: File, maxDim = 1200): Promise<{ blob: Blob; mimeType: string; extension: string }> => {
+  return new Promise((resolve, reject) => {
+    if (file.type === 'image/svg+xml') {
+      resolve({ blob: file, mimeType: 'image/svg+xml', extension: 'svg' });
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      reject({ code: 'image/compression_timeout', message: 'Timeout de 5s ao otimizar imagem localmente.' });
+    }, 5000);
+
+    const reader = new FileReader();
+    reader.onerror = () => {
+      clearTimeout(timer);
+      reject({ code: 'file/read_error', message: 'Erro ao ler o arquivo de imagem' });
+    };
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onerror = () => {
+        clearTimeout(timer);
+        reject({ code: 'image/load_error', message: 'Erro ao carregar a imagem selecionada' });
+      };
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          clearTimeout(timer);
+          reject({ code: 'canvas/context_error', message: 'Contexto do Canvas indisponível' });
+          return;
+        }
+
+        ctx.clearRect(0, 0, width, height);
+        ctx.drawImage(img, 0, 0, width, height);
+
+        const isPng = file.type === 'image/png';
+        const exportType = isPng ? 'image/png' : 'image/jpeg';
+        const extension = isPng ? 'png' : 'jpg';
+
+        canvas.toBlob((blob) => {
+          clearTimeout(timer);
+          if (blob) {
+            resolve({ blob, mimeType: exportType, extension });
+          } else {
+            reject({ code: 'canvas/blob_error', message: 'Erro na otimização da imagem' });
+          }
+        }, exportType, 0.85);
+      };
+      img.src = e.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  });
+};
+
+const uploadServiceImageToStorage = async (file: File, serviceId?: string): Promise<string> => {
+  const { blob, mimeType, extension } = await compressAndOptimizeImage(file);
+  
+  if (!(blob instanceof Blob) || blob.size === 0) {
+    console.error('UPLOAD_ERROR', { code: 'invalid-argument', message: 'O arquivo otimizado não é um Blob/File válido.' });
+    throw { code: 'invalid-argument', message: 'O arquivo de imagem otimizado é inválido.' };
+  }
+
+  const folderId = serviceId || `new_${Date.now()}`;
+  const fileName = `cover-${Date.now()}.${extension}`;
+  const storagePath = `services/${folderId}/${fileName}`;
+  const storageRef = ref(storage, storagePath);
+
+  console.log('UPLOAD_START', { fileName, fileSize: blob.size, mimeType, storagePath });
+
+  return new Promise<string>((resolve, reject) => {
+    const uploadTask = uploadBytesResumable(storageRef, blob, { contentType: mimeType });
+
+    const timeoutId = setTimeout(() => {
+      console.warn('UPLOAD_CANCELLED', { storagePath, reason: 'Timeout de 20s excedido' });
+      try {
+        uploadTask.cancel();
+      } catch (cancelErr) {
+        console.error('UPLOAD_ERROR ao cancelar task:', cancelErr);
+      }
+    }, 20000);
+
+    uploadTask.on(
+      'state_changed',
+      (snapshot) => {
+        const progress = snapshot.totalBytes > 0 ? (snapshot.bytesTransferred / snapshot.totalBytes) * 100 : 0;
+        console.log('UPLOAD_PROGRESS', `${progress.toFixed(1)}% (${snapshot.bytesTransferred}/${snapshot.totalBytes} bytes)`);
+      },
+      (error) => {
+        clearTimeout(timeoutId);
+        if (error.code === 'storage/canceled') {
+          console.error('UPLOAD_CANCELLED', { code: 'storage/canceled', message: 'Upload cancelado devido ao limite de tempo de 20s.' });
+          console.error('UPLOAD_ERROR', { code: 'storage/canceled', message: 'Upload cancelado (timeout 20s).' });
+          reject({ code: 'storage/canceled', message: 'Upload cancelado: tempo limite de 20 segundos excedido.' });
+        } else {
+          console.error('UPLOAD_ERROR', { code: error.code || 'storage/unknown', message: error.message || 'Falha no Storage' });
+          reject({ code: error.code || 'storage/unknown', message: error.message || 'Falha no upload para o Storage' });
+        }
+      },
+      async () => {
+        clearTimeout(timeoutId);
+        console.log('UPLOAD_COMPLETE', storagePath);
+        try {
+          const downloadUrl = await getDownloadURL(storageRef);
+          console.log('DOWNLOAD_URL_SUCCESS', downloadUrl);
+          resolve(downloadUrl);
+        } catch (dlErr: any) {
+          console.error('UPLOAD_ERROR', { code: dlErr?.code || 'download_url_failed', message: dlErr?.message || 'Erro ao obter URL' });
+          reject({ code: dlErr?.code || 'download_url_failed', message: dlErr?.message || 'Erro ao obter URL de download' });
+        }
+      }
+    );
   });
 };
 
@@ -946,17 +1078,19 @@ const Admin = () => {
               setAdminData(userData);
             }
           } else {
-            // Check if there's a pre-created user with this email
-            if (currentUser.email === 'contatorebecafurtado@gmail.com') {
-              const [firstName, ...lastNameParts] = (currentUser.displayName || 'Rebeca Furtado').split(' ');
+            // Check if there's a primary admin with this email
+            const userEmail = (currentUser.email || '').toLowerCase();
+            const primaryAdmins = ['contatorebecafurtado@gmail.com', 'intro5615@gmail.com'];
+            if (primaryAdmins.includes(userEmail)) {
+              const [firstName, ...lastNameParts] = (currentUser.displayName || (userEmail.includes('rebeca') ? 'Rebeca Furtado' : 'Admin')).split(' ');
               const newAdmin: AdminUser = {
                 uid: currentUser.uid,
                 email: currentUser.email!,
                 role: 'admin',
-                displayName: currentUser.displayName || 'Rebeca Furtado',
+                displayName: currentUser.displayName || (userEmail.includes('rebeca') ? 'Rebeca Furtado' : 'Admin'),
                 photoURL: currentUser.photoURL || '',
-                firstName: firstName || 'Rebeca',
-                lastName: lastNameParts.join(' ') || 'Furtado',
+                firstName: firstName || 'Admin',
+                lastName: lastNameParts.join(' ') || '',
                 agencyRole: 'Administrador',
                 siteRole: 'admin',
                 birthDate: '1990-01-01',
@@ -2245,6 +2379,7 @@ const ServicesManager = () => {
   const [serviceToDelete, setServiceToDelete] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
 
   const availableIcons = [
     { name: 'Target', icon: Target },
@@ -2308,27 +2443,78 @@ const ServicesManager = () => {
     });
   }, []);
 
-  const handleServiceImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleServiceImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        const resized = await resizeImage(reader.result as string, 800, 600, file.type);
-        setCurrentService((prev: any) => ({ ...prev, imageUrl: resized }));
-      };
-      reader.readAsDataURL(file);
+      setIsUploadingImage(true);
+      const previousUrl = currentService?.imageUrl || '';
+      let tempPreviewUrl = '';
+
+      try {
+        // Pré-visualização instantânea no formulário
+        tempPreviewUrl = URL.createObjectURL(file);
+        setCurrentService((prev: any) => ({ ...prev, imageUrl: tempPreviewUrl }));
+
+        // Upload da imagem otimizada para o Firebase Storage
+        const downloadUrl = await uploadServiceImageToStorage(file, currentService?.id);
+        
+        // Sucesso: substitui o preview blob: pela URL HTTPS final
+        setCurrentService((prev: any) => ({ ...prev, imageUrl: downloadUrl }));
+
+        if (typeof window !== 'undefined' && (window as any).showAdminToast) {
+          (window as any).showAdminToast('Imagem enviada e vinculada no Storage com sucesso!', 'success');
+        }
+      } catch (err: any) {
+        const errCode = err?.code || 'storage/upload_failed';
+        const errMsg = err?.message || 'Falha no upload da imagem';
+
+        console.error('UPLOAD_ERROR', { code: errCode, message: errMsg });
+
+        // Em caso de erro/cancelamento: restaura a URL antiga (removendo blob: temporário)
+        setCurrentService((prev: any) => ({ ...prev, imageUrl: previousUrl }));
+
+        if (typeof window !== 'undefined' && (window as any).showAdminToast) {
+          (window as any).showAdminToast(`Erro no upload (${errCode}): ${errMsg}`, 'error');
+        }
+      } finally {
+        if (tempPreviewUrl && tempPreviewUrl.startsWith('blob:')) {
+          try {
+            URL.revokeObjectURL(tempPreviewUrl);
+          } catch (_) {}
+        }
+        setIsUploadingImage(false);
+        e.target.value = '';
+      }
     }
   };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isUploadingImage) {
+      if (typeof window !== 'undefined' && (window as any).showAdminToast) {
+        (window as any).showAdminToast('Aguarde a conclusão do upload da imagem antes de salvar.', 'warning');
+      }
+      return;
+    }
+
     setIsSaving(true);
     try {
+      let finalImageUrl = currentService.imageUrl || '';
+
+      // Garantia de segurança: se a URL ainda for base64 ou blob temporário, envia para o Firebase Storage
+      if (finalImageUrl.startsWith('data:image/') || finalImageUrl.startsWith('blob:')) {
+        const res = await fetch(finalImageUrl);
+        const fetchedBlob = await res.blob();
+        const ext = fetchedBlob.type.includes('png') ? 'png' : 'jpg';
+        const file = new File([fetchedBlob], `cover-${Date.now()}.${ext}`, { type: fetchedBlob.type || 'image/jpeg' });
+        finalImageUrl = await uploadServiceImageToStorage(file, currentService?.id);
+      }
+
       const data = {
         title: currentService.title,
         description: currentService.description,
         iconName: currentService.iconName || 'Zap',
-        imageUrl: currentService.imageUrl || '',
+        imageUrl: finalImageUrl,
         highlights: currentService.highlights || [],
         isDark: currentService.isDark !== undefined ? currentService.isDark : false,
         status: currentService.status || 'Ativo',
@@ -2472,9 +2658,10 @@ const ServicesManager = () => {
                 onChange={(e) => setCurrentService({ ...currentService, imageUrl: e.target.value })}
                 className="flex-1 bg-[var(--color-surface-muted)] border border-[var(--color-border)] rounded-xl px-4 py-3 focus:border-[var(--color-accent)] outline-none text-xs sm:text-sm"
               />
-              <label className="cursor-pointer bg-[var(--color-surface)] border border-[var(--color-border)] hover:bg-[var(--color-accent)] hover:text-[var(--color-on-accent)] transition-all px-4 py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 shrink-0">
-                <Upload size={16} /> Upload de Foto
-                <input type="file" accept="image/*" onChange={handleServiceImageChange} className="hidden" />
+              <label className={`cursor-pointer bg-[var(--color-surface)] border border-[var(--color-border)] hover:bg-[var(--color-accent)] hover:text-[var(--color-on-accent)] transition-all px-4 py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 shrink-0 ${isUploadingImage ? 'opacity-50 pointer-events-none' : ''}`}>
+                {isUploadingImage ? <Loader2 className="animate-spin" size={16} /> : <Upload size={16} />}
+                {isUploadingImage ? 'Enviando...' : 'Upload de Foto'}
+                <input type="file" accept="image/*" onChange={handleServiceImageChange} disabled={isUploadingImage} className="hidden" />
               </label>
             </div>
           </div>
@@ -2508,10 +2695,10 @@ const ServicesManager = () => {
           </div>
           <button 
             type="submit" 
-            disabled={isSaving}
+            disabled={isSaving || isUploadingImage}
             className="w-full bg-[var(--color-accent)] text-[var(--color-bg)] py-4 rounded-xl font-bold hover:scale-[1.02] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
           >
-            {isSaving ? <Loader2 className="animate-spin" size={20} /> : 'Salvar Serviço'}
+            {isSaving ? <Loader2 className="animate-spin" size={20} /> : (isUploadingImage ? 'Aguardando Upload de Foto...' : 'Salvar Serviço')}
           </button>
         </form>
       </Modal>
@@ -3953,17 +4140,6 @@ const BlogManager = () => {
     }
   };
 
-  const handlePostImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setCurrentPost({ ...currentPost, imageUrl: reader.result as string });
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
   const imageHandler = useCallback(() => {
     const input = document.createElement('input');
     input.setAttribute('type', 'file');
@@ -4098,30 +4274,53 @@ const BlogManager = () => {
             <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl sm:rounded-3xl lg:rounded-[2.5rem] p-4 sm:p-6 lg:p-8 space-y-5 sm:space-y-6 shadow-xs lg:sticky lg:top-8 w-full max-w-full box-border">
               {/* Imagem de Capa */}
               <div>
-                <label className="block text-xs font-bold text-[var(--color-ink)]/50 uppercase tracking-widest mb-3">Imagem de Capa</label>
-                <div className="space-y-3 sm:space-y-4">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-xs font-bold text-[var(--color-ink)]/50 uppercase tracking-widest">URL da Imagem de Capa</label>
+                  {currentPost?.imageUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setCurrentPost({ ...currentPost, imageUrl: '' })}
+                      className="text-xs font-bold text-red-500 hover:text-red-600 flex items-center gap-1 transition-colors cursor-pointer"
+                      title="Remover imagem"
+                    >
+                      <Trash2 size={12} /> Remover
+                    </button>
+                  )}
+                </div>
+                <div className="space-y-3">
+                  <input 
+                    type="url"
+                    placeholder="https://exemplo.com/imagem.jpg"
+                    value={currentPost?.imageUrl || ''}
+                    onChange={(e) => setCurrentPost({ ...currentPost, imageUrl: e.target.value })}
+                    className="w-full bg-[var(--color-surface-muted)] border border-[var(--color-border)] rounded-xl px-3.5 sm:px-4 py-2.5 sm:py-3 text-sm focus:border-[var(--color-accent)] outline-none box-border text-[var(--color-ink)]"
+                  />
+
+                  {/* Pré-visualização da Imagem */}
                   {currentPost?.imageUrl ? (
-                    <div className="relative group aspect-video rounded-xl sm:rounded-2xl overflow-hidden border border-[var(--color-border)]">
-                      <img src={currentPost.imageUrl} className="w-full h-full object-cover" />
-                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                        <label htmlFor="post-image-upload" className="cursor-pointer p-3 bg-white/20 backdrop-blur-md rounded-full hover:bg-white/40 transition-all">
-                          <ImageIcon size={24} className="text-white" />
-                        </label>
-                      </div>
+                    <div className="relative aspect-video rounded-xl sm:rounded-2xl overflow-hidden border border-[var(--color-border)] bg-[var(--color-surface-muted)] flex items-center justify-center">
+                      <img 
+                        src={currentPost.imageUrl} 
+                        alt="Prévia da Capa" 
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          (e.target as HTMLElement).style.display = 'none';
+                          const parent = (e.target as HTMLElement).parentElement;
+                          if (parent && !parent.querySelector('.img-error-msg')) {
+                            const errDiv = document.createElement('div');
+                            errDiv.className = 'img-error-msg text-xs text-[var(--color-ink)]/50 font-bold p-4 text-center';
+                            errDiv.innerText = 'URL da imagem inválida ou inacessível';
+                            parent.appendChild(errDiv);
+                          }
+                        }}
+                      />
                     </div>
                   ) : (
-                    <label htmlFor="post-image-upload" className="flex flex-col items-center justify-center aspect-video rounded-xl sm:rounded-2xl border-2 border-dashed border-[var(--color-border)] hover:border-[var(--color-accent)] hover:bg-[var(--color-surface-hover)] transition-all cursor-pointer group p-4 text-center">
-                      <Upload size={28} className="text-[var(--color-ink)]/20 group-hover:text-[var(--color-accent)] mb-2 sm:w-8 sm:h-8" />
-                      <span className="text-xs font-bold text-[var(--color-ink)]/60 group-hover:text-[var(--color-accent)]">Upload de Imagem</span>
-                    </label>
+                    <div className="flex flex-col items-center justify-center aspect-video rounded-xl sm:rounded-2xl border-2 border-dashed border-[var(--color-border)] p-4 text-center bg-[var(--color-surface-muted)]/50">
+                      <ImageIcon size={28} className="text-[var(--color-ink)]/20 mb-2 sm:w-8 sm:h-8" />
+                      <span className="text-xs font-bold text-[var(--color-ink)]/40">Cole uma URL de imagem válida acima</span>
+                    </div>
                   )}
-                  <input 
-                    type="file"
-                    id="post-image-upload"
-                    accept="image/*"
-                    onChange={handlePostImageChange}
-                    className="hidden"
-                  />
                 </div>
               </div>
 
